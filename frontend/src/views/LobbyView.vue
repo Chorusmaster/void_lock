@@ -188,7 +188,9 @@ onUnmounted(() => {
 
         <button
           type="submit"
-          :disabled="!connected || !playerStore.username.trim() || !joinCode.trim()"
+          :disabled="
+            !connected || !playerStore.username.trim() || !joinCode.trim()
+          "
           class="w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Join room
