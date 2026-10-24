@@ -60,6 +60,7 @@ function goToRoom(data: RoomCreatedData) {
 }
 
 onMounted(() => {
+  connected.value = socket.connected;
   socket.connect();
 
   socket.on("connect", () => {
