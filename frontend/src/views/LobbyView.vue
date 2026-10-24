@@ -143,119 +143,124 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-    <section
-      class="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
-    >
-      <header class="mb-6 text-center">
-        <h1 class="text-2xl font-semibold text-gray-900">Game Lobby</h1>
-        <p class="mt-2 text-sm text-gray-500">
-          {{ connected ? "Connected" : "Connecting to server..." }}
-        </p>
-      </header>
-
-      <div class="mb-5">
-        <label
-          for="nickname"
-          class="mb-2 block text-sm font-medium text-gray-700"
-        >
-          Your nickname
-        </label>
-
-        <input
-          id="nickname"
-          v-model="playerStore.username"
-          placeholder="Enter your nickname"
-          maxlength="20"
-          required
-          class="w-full rounded-lg border border-gray-300 px-3 py-3 outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
-        />
-      </div>
-
+  <main
+    class="flex min-h-screen w-full items-center justify-center bg-slate-950 p-6 text-slate-100"
+  >
+    <section class="w-full max-w-md z-10">
       <div
-        v-if="errorMessage"
-        role="alert"
-        class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        class="rounded-2xl border border-cyan-900/70 bg-slate-900/80 p-6 shadow-2xl shadow-cyan-950/20"
       >
-        {{ errorMessage }}
-      </div>
+        <div class="mb-6">
+          <label
+            for="nickname"
+            class="mb-2 block text-sm font-medium text-slate-300"
+          >
+            Your nickname
+          </label>
 
-      <div class="mb-6 grid grid-cols-2 rounded-lg bg-gray-100 p-1">
-        <button
-          type="button"
-          @click="mode = 'create'"
-          class="rounded-md px-3 py-2 text-sm font-medium transition"
-          :class="
-            mode === 'create'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-900'
-          "
-        >
-          Create room
-        </button>
-
-        <button
-          type="button"
-          @click="mode = 'join'"
-          class="rounded-md px-3 py-2 text-sm font-medium transition"
-          :class="
-            mode === 'join'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-900'
-          "
-        >
-          Join room
-        </button>
-      </div>
-
-      <div v-if="mode === 'create'" class="space-y-4">
-        <p class="text-center text-sm text-gray-600">
-          Create a room and invite your friends.
-        </p>
-
-        <button
-          type="button"
-          :disabled="!connected || !playerStore.username.trim()"
-          @click="createRoom"
-          class="w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Create room
-        </button>
+          <input
+            id="nickname"
+            v-model="playerStore.username"
+            placeholder="Enter your nickname"
+            maxlength="20"
+            required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50"
+          />
+        </div>
 
         <div
-          v-if="roomCode"
-          class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-center"
+          v-if="errorMessage"
+          role="alert"
+          class="mb-5 rounded-xl border border-red-900 bg-red-950/50 px-4 py-3 text-sm text-red-400"
         >
-          <p class="text-sm text-gray-500">Your room code</p>
-          <p class="mt-1 text-2xl font-semibold tracking-widest text-gray-900">
-            {{ roomCode }}
-          </p>
+          {{ errorMessage }}
         </div>
+
+        <div class="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-slate-950 p-1">
+          <button
+            type="button"
+            @click="mode = 'create'"
+            class="rounded-lg px-3 py-3 text-sm font-semibold transition"
+            :class="
+              mode === 'create'
+                ? 'border border-cyan-800 bg-cyan-950/60 text-cyan-300 shadow-lg shadow-cyan-950/30'
+                : 'text-slate-500 hover:text-slate-200'
+            "
+          >
+            Create room
+          </button>
+
+          <button
+            type="button"
+            @click="mode = 'join'"
+            class="rounded-lg px-3 py-3 text-sm font-semibold transition"
+            :class="
+              mode === 'join'
+                ? 'border border-cyan-800 bg-cyan-950/60 text-cyan-300 shadow-lg shadow-cyan-950/30'
+                : 'text-slate-500 hover:text-slate-200'
+            "
+          >
+            Join room
+          </button>
+        </div>
+
+        <div v-if="mode === 'create'" class="space-y-5">
+          <p class="text-center text-sm leading-6 text-slate-400">
+            Create a secure channel and invite your partner to the mission.
+          </p>
+
+          <button
+            type="button"
+            :disabled="!connected || !playerStore.username.trim()"
+            @click="createRoom"
+            class="w-full rounded-xl border border-cyan-500/50 bg-cyan-500/10 px-4 py-3 font-semibold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-500/20 hover:shadow-lg hover:shadow-cyan-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Initialize room
+          </button>
+
+          <div
+            v-if="roomCode"
+            class="rounded-xl border border-cyan-900 bg-slate-950 p-4 text-center"
+          >
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">
+              Access code
+            </p>
+
+            <p class="mt-2 text-3xl font-bold tracking-[0.35em] text-cyan-300">
+              {{ roomCode }}
+            </p>
+
+            <p class="mt-2 text-xs text-slate-500">
+              Share this code with your partner
+            </p>
+          </div>
+        </div>
+
+        <form v-else @submit.prevent="joinRoom" class="space-y-5">
+          <p class="text-center text-sm leading-6 text-slate-400">
+            Enter your partner's access code to join the mission.
+          </p>
+
+          <input
+            v-model="joinCode"
+            placeholder="ENTER CODE"
+            maxlength="6"
+            required
+            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-4 text-center text-lg uppercase tracking-[0.4em] text-cyan-300 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50"
+          />
+
+          <button
+            type="submit"
+            :disabled="
+              !connected || !playerStore.username.trim() || !joinCode.trim()
+            "
+            class="w-full rounded-xl border border-cyan-500/50 bg-cyan-500/10 px-4 py-3 font-semibold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-500/20 hover:shadow-lg hover:shadow-cyan-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Connect to room
+          </button>
+        </form>
       </div>
-
-      <form v-else @submit.prevent="joinRoom" class="space-y-4">
-        <p class="text-center text-sm text-gray-600">
-          Enter the code shared by the host.
-        </p>
-
-        <input
-          v-model="joinCode"
-          placeholder="Enter room code"
-          maxlength="6"
-          required
-          class="w-full rounded-lg border border-gray-300 px-3 py-3 text-center uppercase tracking-widest outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
-        />
-
-        <button
-          type="submit"
-          :disabled="
-            !connected || !playerStore.username.trim() || !joinCode.trim()
-          "
-          class="w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Join room
-        </button>
-      </form>
     </section>
+
   </main>
 </template>

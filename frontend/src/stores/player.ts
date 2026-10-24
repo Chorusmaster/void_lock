@@ -6,6 +6,7 @@ export type PlayerRole = "Decoder" | "Operator";
 export const usePlayerStore = defineStore("player", () => {
   const storedUsername = localStorage.getItem("username") ?? "";
   const usernameState = ref(storedUsername);
+  const mood = ref<"ok" | "fail">("ok");
 
   const username = computed({
     get: () => usernameState.value,
@@ -15,7 +16,15 @@ export const usePlayerStore = defineStore("player", () => {
     },
   });
 
+  function triggerFail() {
+    mood.value = "fail";
+
+    setTimeout(() => {
+      mood.value = "ok";
+    }, 1000);
+  }
+
   const role = ref<PlayerRole | null>(null);
 
-  return { username, role };
+  return { username, role, mood, triggerFail };
 });
