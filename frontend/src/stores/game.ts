@@ -25,6 +25,12 @@ export const useGameStore = defineStore('game', () => {
     secretCode.value = sequence
   }
 
+  function resetGame() {
+    level.value = 0
+    availableSymbols.value = []
+    secretCode.value = []
+  }
+
   return {
     level,
     availableSymbols,
@@ -32,6 +38,7 @@ export const useGameStore = defineStore('game', () => {
     roomCode,
     setLevel,
     setSecretCode,
-    setRoomCode
+    setRoomCode,
+    resetGame
   }
 })

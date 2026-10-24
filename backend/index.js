@@ -5,6 +5,7 @@ import { getRandomSymbols, generateSequence } from "./game.js";
 import { SYMBOL_IDS } from "./symbols.js";
 
 const LEVEL_DURATION_SECONDS = 30;
+const ROLE_REVEAL_DURATION_SECONDS = 3;
 const MAX_LEVELS = 3;
 const levelTimers = new Map();
 
@@ -33,7 +34,7 @@ function startRoleReveal(roomCode) {
     return;
   }
 
-  const duration = 1;
+  const duration = ROLE_REVEAL_DURATION_SECONDS;
   const startAt = Date.now() + duration * 1000;
 
   room.status = "revealing";
@@ -127,20 +128,32 @@ function assignRoles(roomCode, decoderId) {
   return true;
 }
 
-function finishGame(roomCode, result) {
+function resetRoomForLobby(room) {
+  room.status = "waiting";
+  room.rolesAssigned = false;
+  room.level = 0;
+  room.availableSymbols = [];
+  room.currentSequence = [];
+
+  for (const player of room.players) {
+    player.role = null;
+  }
+}
+
+function finishGame(roomCode) {
   const room = rooms.get(roomCode);
   if (!room) return;
+
+  const level = room.level;
 
   clearInterval(levelTimers.get(roomCode));
   levelTimers.delete(roomCode);
 
-  room.status = result;
+  resetRoomForLobby(room);
 
   io.to(roomCode).emit("game-won", {
-    level: room.level,
+    level,
   });
-
-  rooms.delete(roomCode);
 }
 
 io.on("connection", (socket) => {
@@ -226,6 +239,11 @@ io.on("connection", (socket) => {
 
     if (!room || !socket.rooms.has(roomCode)) return;
 
+    socket.emit("room-info", {
+      roomCode,
+      isHost: room.hostId === socket.id,
+    });
+
     socket.emit(
       "player-list",
       room.players.map(({ id, nickname }) => ({ id, nickname })),
@@ -295,7 +313,7 @@ io.on("connection", (socket) => {
       if (room.level < MAX_LEVELS) {
         startLevel(roomCode, room.level + 1);
       } else {
-        finishGame(roomCode, "won");
+        finishGame(roomCode);
       }
     } else {
       socket.emit("code-result", { isCorrect: false });
@@ -399,11 +417,9 @@ export function startLevelTimer(roomCode) {
       clearInterval(timer);
       levelTimers.delete(roomCode);
 
-      room.status = "ended";
+      resetRoomForLobby(room);
 
       io.to(roomCode).emit("game-ended", { level });
-
-      rooms.delete(roomCode);
 
       return;
     }

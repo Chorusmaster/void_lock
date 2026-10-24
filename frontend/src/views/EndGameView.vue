@@ -3,12 +3,15 @@ import { useRouter, useRoute } from "vue-router";
 import { computed } from "vue";
 
 const router = useRouter();
+const route = useRoute();
 
 function backToLobby() {
-  router.replace({ name: "lobby" });
+  router.replace({
+    name: "room",
+    params: { roomCode: String(route.params.roomCode) },
+  });
 }
 
-const route = useRoute();
 const isWinner = computed(() => route.query.result === "won");
 </script>
 
@@ -28,8 +31,8 @@ const isWinner = computed(() => route.query.result === "won");
       <p class="mb-8 text-slate-400">
         {{
           isWinner
-            ? "Congratulations! You cleared all 3 levels and cracked the alien code."
-            : "The game has ended. Your room is now closed."
+            ? "Congratulations! You cleared all 3 levels and cracked the alien code. Return to the room lobby to play again."
+            : "Time ran out, but your room is still open. Return to the room lobby to play again."
         }}
       </p>
 
@@ -37,7 +40,7 @@ const isWinner = computed(() => route.query.result === "won");
         class="w-full rounded-xl bg-slate-100 px-5 py-3 font-semibold text-slate-950 transition hover:bg-white"
         @click="backToLobby"
       >
-        Back to Lobby
+        Return to Room Lobby
       </button>
     </section>
   </main>

@@ -73,15 +73,22 @@ function handleDisconnect() {
   router.replace({ name: "lobby" });
 }
 
+function showEndGame(result: "won" | "ended") {
+  gameStore.resetGame();
+  playerStore.role = null;
+  router.replace({
+    name: "end-game",
+    params: { roomCode: String(route.params.roomCode) },
+    query: { result },
+  });
+}
+
 function handleGameEnded() {
-  router.replace({ name: "end-game" });
+  showEndGame("ended");
 }
 
 function handleGameWon() {
-  router.replace({
-    name: "end-game",
-    query: { result: "won" },
-  });
+  showEndGame("won");
 }
 
 onMounted(() => {});
