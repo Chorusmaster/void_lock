@@ -95,12 +95,27 @@ function handleRoleAssigned(data: {
   });
 }
 
+function handleRoleReveal(data: {
+  role: PlayerRole
+  startAt: number
+  duration: number
+}) {
+  playerStore.role = data.role
+
+  router.replace({
+    name: 'role-reveal', // заміни на назву свого маршруту
+    params: { roomCode: props.roomCode },
+    query: { startAt: String(data.startAt) },
+  })
+}
+
 onMounted(() => {
   socket.on("disconnect", handleDisconnect)
   socket.on("player-list", handlePlayerList)
   socket.on("room-error", handleRoomError)
   socket.on("role-assigned", handleRoleAssigned)
   socket.on("room-info", handleRoomInfo)
+  socket.on('role-reveal', handleRoleReveal)
 
   if (!socket.connected) {
     router.replace({ name: "lobby" });
@@ -116,6 +131,7 @@ onUnmounted(() => {
   socket.off("room-error", handleRoomError)
   socket.off("role-assigned", handleRoleAssigned)
   socket.off("room-info", handleRoomInfo)
+  socket.off('role-reveal', handleRoleReveal)
 });
 </script>
 

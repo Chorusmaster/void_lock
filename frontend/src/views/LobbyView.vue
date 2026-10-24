@@ -3,9 +3,11 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { socket } from "../socket";
 import { usePlayerStore } from "../stores/player";
+import { useGameStore } from "@/stores/game";
 
 const router = useRouter();
 const playerStore = usePlayerStore();
+const gameStore = useGameStore();
 
 interface RoomCreatedData {
   roomCode: string;
@@ -49,6 +51,7 @@ function handleRoomError(message: string) {
 
 function goToRoom(data: RoomCreatedData) {
   roomCode.value = data.roomCode;
+  gameStore.setRoomCode(roomCode.value);
 
   router.push({
     name: "room",

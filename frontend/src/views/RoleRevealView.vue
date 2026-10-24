@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { usePlayerStore } from '../stores/player'
+import { socket } from '../socket'
+import { usePlayerStore, type PlayerRole } from '../stores/player'
+import { useGameStore } from '../stores/game'
+
+const gameStore = useGameStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -13,26 +17,44 @@ const roomCode = computed(() => String(route.params.roomCode ?? ''))
 
 let timer: ReturnType<typeof setInterval> | undefined
 
+function handleStartLevel(data: {
+  level: number
+  availableSymbols: string[]
+}) {
+  if (timer) clearInterval(timer)
+
+  gameStore.setLevel(data)
+
+  router.replace({
+    name: 'game',
+    params: { roomCode: roomCode.value },
+  })
+}
+
 onMounted(() => {
-  if (!role.value) {
+  const startAt = Number(route.query.startAt)
+
+  if (!role.value || !Number.isFinite(startAt) || startAt <= 0) {
     router.replace({ name: 'lobby' })
     return
   }
 
-  timer = setInterval(() => {
-    seconds.value--
+  const updateCountdown = () => {
+    seconds.value = Math.max(
+      0,
+      Math.ceil((startAt - Date.now()) / 1000),
+    )
+  }
 
-    if (seconds.value <= 0) {
-      clearInterval(timer)
-      router.replace({
-        name: 'game',
-        params: { roomCode: roomCode.value },
-      })
-    }
-  }, 1000)
+  updateCountdown()
+  timer = setInterval(updateCountdown, 100)
+
+  socket.on('level-started', handleStartLevel)
 })
 
 onUnmounted(() => {
+  socket.off('level-started', handleStartLevel)
+
   if (timer) clearInterval(timer)
 })
 </script>
