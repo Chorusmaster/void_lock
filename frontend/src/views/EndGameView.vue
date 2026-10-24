@@ -28,7 +28,7 @@ const isWinner = computed(() => route.query.result === "won");
       <p class="mb-8 text-slate-400">
         {{
           isWinner
-            ? "Congratulations! You cracked the alien code."
+            ? "Congratulations! You cleared all 3 levels and cracked the alien code."
             : "The game has ended. Your room is now closed."
         }}
       </p>

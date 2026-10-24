@@ -51,6 +51,20 @@ function handleSequenceGenerated(data: { sequence: string[] }) {
   gameStore.setSecretCode(data.sequence);
 }
 
+function handleLevelStarted(data: {
+  level: number;
+  availableSymbols: string[];
+}) {
+  gameStore.setLevel(data);
+
+  if (playerStore.role === "Decoder") {
+    socket.emit("generate-sequence", {
+      roomCode: String(route.params.roomCode),
+      length: 5,
+    });
+  }
+}
+
 function handleRoomError(message: string) {
   errorMessage.value = message;
 }
@@ -79,6 +93,7 @@ onMounted(() => {
   }
 
   socket.on("sequence-generated", handleSequenceGenerated);
+  socket.on("level-started", handleLevelStarted);
   socket.on("room-error", handleRoomError);
 
   if (playerStore.role === "Decoder" && gameStore.level > 0) {
@@ -97,6 +112,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   socket.off("sequence-generated", handleSequenceGenerated);
+  socket.off("level-started", handleLevelStarted);
   socket.off("room-error", handleRoomError);
   socket.off("disconnect", handleDisconnect);
   socket.off("level-timer-started", handleTimerStarted);
@@ -111,6 +127,10 @@ onUnmounted(() => {
 <template>
   <main class="min-h-screen p-6">
     <div class="mx-auto mb-8 w-full max-w-md">
+      <p class="mb-4 text-center text-sm font-semibold uppercase tracking-widest text-cyan-400">
+        Level {{ gameStore.level }} / 3
+      </p>
+
       <div class="mb-2 flex items-center justify-between">
         <span class="text-sm font-medium text-gray-500"> TIME REMAINING </span>
 

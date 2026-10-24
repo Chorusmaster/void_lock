@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useGameStore } from "../stores/game";
 import { useAlienSymbolsStore } from "../stores/alienSymbols";
 import { socket } from "../socket";
@@ -11,6 +11,15 @@ const codeLength = 5;
 const code = ref<(string | null)[]>(Array(codeLength).fill(null));
 const result = ref<boolean | null>(null);
 const errorMessage = ref("");
+
+watch(
+  () => gameStore.level,
+  () => {
+    code.value = Array(codeLength).fill(null);
+    result.value = null;
+    errorMessage.value = "";
+  },
+);
 
 const symbols = computed(() =>
   gameStore.availableSymbols
