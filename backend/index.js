@@ -4,10 +4,11 @@ import { Server } from "socket.io";
 import { getRandomSymbols, generateSequence } from "./game.js";
 import { SYMBOL_IDS } from "./symbols.js";
 
-import 'dotenv/config';
+import "dotenv/config";
 
 const LEVEL_DURATION_SECONDS = 30;
 const ROLE_REVEAL_DURATION_SECONDS = 3;
+const PLAYER_RECONNECT_GRACE_SECONDS = 30;
 const MAX_LEVELS = 3;
 const levelTimers = new Map();
 
@@ -28,6 +29,7 @@ const io = new Server(httpServer, {
 
 const rooms = new Map();
 const roleRevealTimers = new Map();
+const playerReconnectTimers = new Map();
 
 function startRoleReveal(roomCode) {
   const room = rooms.get(roomCode);
@@ -40,9 +42,10 @@ function startRoleReveal(roomCode) {
   const startAt = Date.now() + duration * 1000;
 
   room.status = "revealing";
+  room.roleRevealEndsAt = startAt;
 
   for (const player of room.players) {
-    io.to(player.id).emit("role-reveal", {
+    io.to(player.socketId).emit("role-reveal", {
       role: player.role,
       startAt,
       duration,
@@ -64,6 +67,7 @@ function startLevel(roomCode, level = 1) {
 
   room.status = "playing";
   room.level = level;
+  room.roleRevealEndsAt = null;
   room.availableSymbols = getRandomSymbols(
     Math.min(3 + room.level, SYMBOL_IDS.length),
   );
@@ -97,14 +101,20 @@ function broadcastPlayers(roomCode) {
 
   io.to(roomCode).emit(
     "player-list",
-    room.players.map(({ id, nickname }) => ({ id, nickname })),
+    room.players.map(({ id, nickname, socketId }) => ({
+      id,
+      nickname,
+      connected: Boolean(socketId),
+    })),
   );
 
   for (const player of room.players) {
-    io.to(player.id).emit("room-info", {
-      roomCode,
-      isHost: player.id === room.hostId,
-    });
+    if (player.socketId) {
+      io.to(player.socketId).emit("room-info", {
+        roomCode,
+        isHost: player.id === room.hostId,
+      });
+    }
   }
 }
 
@@ -119,30 +129,69 @@ function removePlayerFromRoom(socket) {
     return;
   }
 
-  room.players = room.players.filter((player) => player.id !== socket.id);
+  const player = room.players.find(
+    (candidate) => candidate.id === socket.data.playerId,
+  );
+
+  if (!player || player.socketId !== socket.id) {
+    delete socket.data.roomCode;
+    delete socket.data.nickname;
+    return;
+  }
+
+  removePlayerFromRoomById(roomCode, player.id);
+  delete socket.data.roomCode;
+  delete socket.data.nickname;
+}
+
+function clearRoomTimers(roomCode) {
+  clearInterval(levelTimers.get(roomCode));
+  levelTimers.delete(roomCode);
+  clearTimeout(roleRevealTimers.get(roomCode));
+  roleRevealTimers.delete(roomCode);
+}
+
+function removePlayerFromRoomById(roomCode, playerId) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+
+  const player = room.players.find((candidate) => candidate.id === playerId);
+  if (!player) return;
+
+  clearTimeout(playerReconnectTimers.get(playerId));
+  playerReconnectTimers.delete(playerId);
+  room.players = room.players.filter((candidate) => candidate.id !== playerId);
 
   if (room.players.length === 0) {
     rooms.delete(roomCode);
-    clearInterval(levelTimers.get(roomCode));
-    levelTimers.delete(roomCode);
-    clearTimeout(roleRevealTimers.get(roomCode));
-    roleRevealTimers.delete(roomCode);
+    clearRoomTimers(roomCode);
   } else {
-    if (room.hostId === socket.id) {
+    const gameWasActive = room.rolesAssigned || room.status !== "waiting";
+
+    if (room.hostId === playerId) {
       room.hostId = room.players[0].id;
+    }
+
+    if (gameWasActive) {
+      clearRoomTimers(roomCode);
+      resetRoomForLobby(room);
+      io.to(roomCode).emit("room-reset");
     }
 
     broadcastPlayers(roomCode);
   }
-
-  delete socket.data.roomCode;
-  delete socket.data.nickname;
 }
 
 function assignRoles(roomCode, decoderId) {
   const room = rooms.get(roomCode);
 
-  if (!room || room.players.length !== 2) return false;
+  if (
+    !room ||
+    room.players.length !== 2 ||
+    room.players.some((player) => !player.socketId)
+  ) {
+    return false;
+  }
   if (room.rolesAssigned) return false;
   if (!room.players.some((player) => player.id === decoderId)) {
     return false;
@@ -151,7 +200,7 @@ function assignRoles(roomCode, decoderId) {
   for (const player of room.players) {
     player.role = player.id === decoderId ? "Decoder" : "Operator";
 
-    io.to(player.id).emit("role-assigned", {
+    io.to(player.socketId).emit("role-assigned", {
       roomCode,
       role: player.role,
     });
@@ -167,6 +216,8 @@ function resetRoomForLobby(room) {
   room.level = 0;
   room.availableSymbols = [];
   room.currentSequence = [];
+  room.roleRevealEndsAt = null;
+  room.levelEndsAt = null;
 
   for (const player of room.players) {
     player.role = null;
@@ -189,8 +240,64 @@ function finishGame(roomCode) {
   });
 }
 
+function restorePlayer(socket) {
+  const playerId = socket.data.playerId;
+
+  for (const [roomCode, room] of rooms) {
+    const player = room.players.find((candidate) => candidate.id === playerId);
+
+    if (!player) continue;
+
+    const oldSocket = io.sockets.sockets.get(player.socketId);
+
+    clearTimeout(playerReconnectTimers.get(playerId));
+    playerReconnectTimers.delete(playerId);
+    player.socketId = socket.id;
+
+    if (oldSocket && oldSocket.id !== socket.id) {
+      oldSocket.disconnect(true);
+    }
+
+    socket.data.roomCode = roomCode;
+    socket.data.nickname = player.nickname;
+    socket.join(roomCode);
+
+    socket.emit("room-restored", {
+      roomCode,
+      nickname: player.nickname,
+      role: player.role,
+      isHost: room.hostId === playerId,
+      status: room.status ?? "waiting",
+      level: room.level ?? 0,
+      availableSymbols: room.availableSymbols ?? [],
+      roleRevealEndsAt: room.roleRevealEndsAt ?? null,
+      levelEndsAt: room.levelEndsAt ?? null,
+    });
+
+    broadcastPlayers(roomCode);
+    return true;
+  }
+
+  return false;
+}
+
 io.on("connection", (socket) => {
-  console.log("Player connected:", socket.id);
+  const playerId = socket.handshake.auth.playerId;
+
+  if (typeof playerId !== "string") {
+    socket.disconnect();
+    return;
+  }
+
+  socket.data.playerId = playerId;
+
+  console.log("Player connected:", playerId);
+
+  restorePlayer(socket);
+
+  socket.on("restore-room", () => {
+    restorePlayer(socket);
+  });
 
   socket.on("create-room", (rawNickname) => {
     const nickname = String(rawNickname ?? "")
@@ -202,9 +309,15 @@ io.on("connection", (socket) => {
     const roomCode = generateRoomCode();
 
     rooms.set(roomCode, {
-      hostId: socket.id,
+      hostId: playerId,
       rolesAssigned: false,
-      players: [{ id: socket.id, nickname }],
+      players: [
+        {
+          id: playerId,
+          socketId: socket.id,
+          nickname,
+        },
+      ],
     });
 
     socket.join(roomCode);
@@ -247,6 +360,11 @@ io.on("connection", (socket) => {
         return;
       }
 
+      if (room.players.some((player) => player.id === playerId)) {
+        socket.emit("room-error", "You are already in this room");
+        return;
+      }
+
       const nicknameTaken = room.players.some(
         (player) => player.nickname.toLowerCase() === nickname.toLowerCase(),
       );
@@ -256,7 +374,11 @@ io.on("connection", (socket) => {
         return;
       }
 
-      room.players.push({ id: socket.id, nickname });
+      room.players.push({
+        id: playerId,
+        socketId: socket.id,
+        nickname,
+      });
 
       socket.join(roomCode);
       socket.data.roomCode = roomCode;
@@ -282,18 +404,22 @@ io.on("connection", (socket) => {
 
     socket.emit("room-info", {
       roomCode,
-      isHost: room.hostId === socket.id,
+      isHost: room.hostId === playerId,
     });
 
     socket.emit(
       "player-list",
-      room.players.map(({ id, nickname }) => ({ id, nickname })),
+      room.players.map(({ id, nickname, socketId }) => ({
+        id,
+        nickname,
+        connected: Boolean(socketId),
+      })),
     );
   });
 
   socket.on("generate-sequence", ({ roomCode, length } = {}) => {
     const room = rooms.get(roomCode);
-    const player = room?.players.find(({ id }) => id === socket.id);
+    const player = room?.players.find(({ id }) => id === playerId);
 
     if (
       !room ||
@@ -316,7 +442,7 @@ io.on("connection", (socket) => {
 
   socket.on("submit-code", ({ roomCode, code } = {}) => {
     const room = rooms.get(roomCode);
-    const player = room?.players.find(({ id }) => id === socket.id);
+    const player = room?.players.find(({ id }) => id === playerId);
 
     if (
       !room ||
@@ -362,13 +488,33 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    removePlayerFromRoom(socket);
+    const roomCode = socket.data.roomCode;
+    const room = rooms.get(roomCode);
+    const player = room?.players.find(
+      (candidate) =>
+        candidate.id === playerId && candidate.socketId === socket.id,
+    );
+
+    if (!room || !player) return;
+
+    player.socketId = null;
+    broadcastPlayers(roomCode);
+
+    const timer = setTimeout(() => {
+      playerReconnectTimers.delete(playerId);
+
+      if (player.socketId === null) {
+        removePlayerFromRoomById(roomCode, playerId);
+      }
+    }, PLAYER_RECONNECT_GRACE_SECONDS * 1000);
+
+    playerReconnectTimers.set(playerId, timer);
   });
 
   socket.on("assign-roles-manual", ({ roomCode, decoderId } = {}) => {
     const room = rooms.get(roomCode);
 
-    if (!room || room.hostId !== socket.id) {
+    if (!room || room.hostId !== playerId) {
       socket.emit("room-error", "Only the host can assign roles");
       return;
     }
@@ -387,7 +533,7 @@ io.on("connection", (socket) => {
   socket.on("assign-roles-random", ({ roomCode } = {}) => {
     const room = rooms.get(roomCode);
 
-    if (!room || room.hostId !== socket.id) {
+    if (!room || room.hostId !== playerId) {
       socket.emit("room-error", "Only the host can assign roles");
       return;
     }
@@ -422,6 +568,8 @@ export function startLevelTimer(roomCode) {
   const startAt = Date.now();
   const endsAt = startAt + duration * 1000;
   const level = room.level;
+
+  room.levelEndsAt = endsAt;
 
   io.to(roomCode).emit("level-timer-started", {
     level,

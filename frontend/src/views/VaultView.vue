@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useGameStore } from "../stores/game";
 import { useAlienSymbolsStore } from "../stores/alienSymbols";
-import { socket } from "../socket";
+import { socket } from "../utils/socket";
 
 const gameStore = useGameStore();
 const alienSymbolsStore = useAlienSymbolsStore();

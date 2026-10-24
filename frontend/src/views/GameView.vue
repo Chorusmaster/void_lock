@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed } from "vue";
-import { socket } from "../socket";
+import { socket } from "../utils/socket.ts";
 import { useGameStore } from "../stores/game";
 import { usePlayerStore } from "../stores/player";
 import { useRoute, useRouter } from "vue-router";
@@ -36,6 +36,7 @@ function updateTimer() {
 
 function handleTimerStarted(data: { endsAt: number }) {
   timerEndsAt.value = data.endsAt;
+  gameStore.setTimerEndsAt(data.endsAt);
 
   updateTimer();
 
@@ -73,6 +74,15 @@ function handleDisconnect() {
   router.replace({ name: "lobby" });
 }
 
+function handleRoomReset() {
+  gameStore.resetGame();
+  playerStore.role = null;
+  router.replace({
+    name: "room",
+    params: { roomCode: String(route.params.roomCode) },
+  });
+}
+
 function showEndGame(result: "won" | "ended") {
   gameStore.resetGame();
   playerStore.role = null;
@@ -90,8 +100,6 @@ function handleGameEnded() {
 function handleGameWon() {
   showEndGame("won");
 }
-
-onMounted(() => {});
 
 onMounted(() => {
   if (!socket.connected) {
@@ -115,6 +123,11 @@ onMounted(() => {
   socket.on("level-timer-tick", handleTimerTick);
   socket.on("game-ended", handleGameEnded);
   socket.on("game-won", handleGameWon);
+  socket.on("room-reset", handleRoomReset);
+
+  if (gameStore.timerEndsAt !== null) {
+    handleTimerStarted({ endsAt: gameStore.timerEndsAt });
+  }
 });
 
 onUnmounted(() => {
@@ -126,6 +139,7 @@ onUnmounted(() => {
   socket.off("level-timer-tick", handleTimerTick);
   socket.off("game-ended", handleGameEnded);
   socket.off("game-won", handleGameWon);
+  socket.off("room-reset", handleRoomReset);
 
   clearInterval(timerInterval);
 });
@@ -134,7 +148,9 @@ onUnmounted(() => {
 <template>
   <main class="min-h-screen p-6">
     <div class="mx-auto mb-8 w-full max-w-md">
-      <p class="mb-4 text-center text-sm font-semibold uppercase tracking-widest text-cyan-400">
+      <p
+        class="mb-4 text-center text-sm font-semibold uppercase tracking-widest text-cyan-400"
+      >
         Level {{ gameStore.level }} / 3
       </p>
 

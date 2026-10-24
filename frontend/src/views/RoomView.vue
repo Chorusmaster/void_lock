@@ -1,7 +1,6 @@
-
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { socket } from "../socket";
+import { socket } from "../utils/socket";
 import { useRouter } from "vue-router";
 import { usePlayerStore, type PlayerRole } from "../stores/player";
 import { useGameStore } from "../stores/game";
@@ -23,10 +22,7 @@ function leaveRoom() {
   router.replace({ name: "lobby" });
 }
 
-function handleRoomInfo(data: {
-  roomCode: string;
-  isHost: boolean;
-}) {
+function handleRoomInfo(data: { roomCode: string; isHost: boolean }) {
   if (data.roomCode === props.roomCode) {
     isHost.value = data.isHost;
   }
@@ -35,14 +31,19 @@ function handleRoomInfo(data: {
 interface Player {
   id: string;
   nickname: string;
+  connected: boolean;
 }
 
-const players = ref<Player[]>([])
-const selectedDecoderId = ref("")
-const errorMessage = ref("")
-const isAssigning = ref(false)
+const players = ref<Player[]>([]);
+const selectedDecoderId = ref("");
+const errorMessage = ref("");
+const isAssigning = ref(false);
 
-const canStart = computed(() => players.value.length === 2);
+const canStart = computed(
+  () =>
+    players.value.length === 2 &&
+    players.value.every((player) => player.connected),
+);
 
 async function copyRoomCode() {
   try {
@@ -56,6 +57,15 @@ function handleDisconnect() {
   router.replace({ name: "lobby" });
 }
 
+function handleRoomReset() {
+  playerStore.role = null;
+  gameStore.resetGame();
+  router.replace({
+    name: "room",
+    params: { roomCode: props.roomCode },
+  });
+}
+
 function handlePlayerList(playerList: Player[]) {
   players.value = playerList;
 
@@ -65,7 +75,7 @@ function handlePlayerList(playerList: Player[]) {
 }
 
 function assignManualRoles() {
-  if (!selectedDecoderId.value || !canStart.value || !isHost) return;
+  if (!selectedDecoderId.value || !canStart.value || !isHost.value) return;
 
   errorMessage.value = "";
   isAssigning.value = true;
@@ -77,7 +87,7 @@ function assignManualRoles() {
 }
 
 function assignRandomRoles() {
-  if (!canStart.value || !isHost) return;
+  if (!canStart.value || !isHost.value) return;
 
   errorMessage.value = "";
   isAssigning.value = true;
@@ -93,51 +103,57 @@ function handleRoomError(message: string) {
 }
 
 function handleRoleReveal(data: {
-  role: PlayerRole
-  startAt: number
-  duration: number
+  role: PlayerRole;
+  startAt: number;
+  duration: number;
 }) {
-  playerStore.role = data.role
+  playerStore.role = data.role;
 
   router.push({
-    name: 'role-reveal',
+    name: "role-reveal",
     params: { roomCode: props.roomCode },
     query: { startAt: String(data.startAt) },
-  })
+  });
 }
 
 onMounted(() => {
-  socket.on("disconnect", handleDisconnect)
-  socket.on("player-list", handlePlayerList)
-  socket.on("room-error", handleRoomError)
-  socket.on("room-info", handleRoomInfo)
-  socket.on('role-reveal', handleRoleReveal)
+  socket.on("disconnect", handleDisconnect);
+  socket.on("player-list", handlePlayerList);
+  socket.on("room-error", handleRoomError);
+  socket.on("room-info", handleRoomInfo);
+  socket.on("role-reveal", handleRoleReveal);
+  socket.on("room-reset", handleRoomReset);
 
   if (!socket.connected) {
     router.replace({ name: "lobby" });
     return;
   }
 
-  socket.emit("get-players", props.roomCode)
+  socket.emit("get-players", props.roomCode);
 });
 
 onUnmounted(() => {
-  socket.off("disconnect", handleDisconnect)
-  socket.off("player-list", handlePlayerList)
-  socket.off("room-error", handleRoomError)
-  socket.off("room-info", handleRoomInfo)
-  socket.off('role-reveal', handleRoleReveal)
+  socket.off("disconnect", handleDisconnect);
+  socket.off("player-list", handlePlayerList);
+  socket.off("room-error", handleRoomError);
+  socket.off("room-info", handleRoomInfo);
+  socket.off("role-reveal", handleRoleReveal);
+  socket.off("room-reset", handleRoomReset);
 });
 </script>
 
 <template>
   <main class="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-    <section class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <section
+      class="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+    >
       <header>
         <p class="text-sm font-medium text-gray-500">GAME LOBBY</p>
         <h1 class="mt-1 text-2xl font-semibold text-gray-900">Game Room</h1>
 
-        <div class="mt-4 flex items-center justify-between rounded-xl bg-gray-50 p-4">
+        <div
+          class="mt-4 flex items-center justify-between rounded-xl bg-gray-50 p-4"
+        >
           <div>
             <p class="text-xs text-gray-500">ROOM CODE</p>
             <p class="mt-1 text-xl font-bold tracking-[0.2em] text-gray-900">
@@ -157,7 +173,9 @@ onUnmounted(() => {
       <section class="mt-6">
         <div class="mb-3 flex items-center justify-between">
           <h2 class="font-semibold text-gray-900">Players</h2>
-          <span class="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700">
+          <span
+            class="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700"
+          >
             {{ players.length }} / 2
           </span>
         </div>
@@ -168,7 +186,9 @@ onUnmounted(() => {
             :key="player.id"
             class="flex items-center gap-3 rounded-xl border border-gray-200 p-3"
           >
-            <span class="flex size-10 items-center justify-center rounded-full bg-gray-100 font-semibold text-gray-700">
+            <span
+              class="flex size-10 items-center justify-center rounded-full bg-gray-100 font-semibold text-gray-700"
+            >
               {{ player.nickname.charAt(0).toUpperCase() }}
             </span>
 
@@ -177,7 +197,13 @@ onUnmounted(() => {
                 {{ player.nickname }}
               </p>
               <p class="text-xs text-gray-500">
-                {{ index === 0 ? "Room host" : "Player" }}
+                {{
+                  player.connected
+                    ? index === 0
+                      ? "Room host"
+                      : "Player"
+                    : "Reconnecting..."
+                }}
               </p>
             </div>
 
@@ -212,11 +238,7 @@ onUnmounted(() => {
           :disabled="!canStart || isAssigning"
           class="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm text-gray-900 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-gray-100"
         >
-          <option
-            v-for="player in players"
-            :key="player.id"
-            :value="player.id"
-          >
+          <option v-for="player in players" :key="player.id" :value="player.id">
             {{ player.nickname }}
           </option>
         </select>
