@@ -6,7 +6,7 @@ import { SYMBOL_IDS } from "./symbols.js";
 
 import "dotenv/config";
 
-const LEVEL_DURATION_SECONDS = 30;
+const LEVEL_DURATION_SECONDS = 900;
 const ROLE_REVEAL_DURATION_SECONDS = 3;
 const PLAYER_RECONNECT_GRACE_SECONDS = 30;
 const MAX_LEVELS = 3;
@@ -484,6 +484,7 @@ io.on("connection", (socket) => {
       }
     } else {
       socket.emit("code-result", { isCorrect: false });
+
     }
   });
 

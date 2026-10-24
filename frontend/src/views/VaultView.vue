@@ -3,7 +3,9 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useGameStore } from "../stores/game";
 import { useAlienSymbolsStore } from "../stores/alienSymbols";
 import { socket } from "../utils/socket";
+import { usePlayerStore } from "@/stores/player";
 
+const player = usePlayerStore();
 const gameStore = useGameStore();
 const alienSymbolsStore = useAlienSymbolsStore();
 
@@ -36,7 +38,10 @@ const isCodeComplete = computed(() =>
 );
 
 function addSymbol(symbolId: string) {
+  console.log(symbolId);
+
   result.value = null;
+  errorMessage.value = "";
 
   const index = code.value.findIndex((symbol) => symbol === null);
 
@@ -47,11 +52,13 @@ function addSymbol(symbolId: string) {
 
 function removeSymbol(index: number) {
   result.value = null;
+  errorMessage.value = "";
   code.value[index] = null;
 }
 
 function clearCode() {
   result.value = null;
+  errorMessage.value = "";
   code.value = Array(codeLength).fill(null);
 }
 
@@ -69,6 +76,7 @@ function unlockVault() {
 
 function handleCodeResult(data: { isCorrect: boolean }) {
   result.value = data.isCorrect;
+  if (!data.isCorrect) player.triggerFail();
   errorMessage.value = "";
 }
 
@@ -85,142 +93,155 @@ onUnmounted(() => {
   socket.off("code-result", handleCodeResult);
   socket.off("room-error", handleRoomError);
 });
+
+const layout = {
+  codeSlots: [
+    { x: 19, y: 18, width: 10, height: 20 },
+    { x: 33, y: 18, width: 10, height: 20 },
+    { x: 47, y: 18, width: 10, height: 20 },
+    { x: 61, y: 18, width: 10, height: 20 },
+    { x: 74, y: 18, width: 10, height: 20 },
+  ],
+
+  keyboard: [
+    { x: 33, y: 62, width: 5, height: 5 },
+    { x: 39, y: 62, width: 5, height: 5 },
+    { x: 44.5, y: 62, width: 5, height: 5 },
+    { x: 50, y: 62, width: 5, height: 5 },
+    { x: 56, y: 62, width: 5, height: 5 },
+    { x: 62, y: 62, width: 5, height: 5 },
+  ],
+};
 </script>
 
 <template>
-  <main class="min-h-screen bg-gray-50 text-gray-900">
-    <div class="mx-auto max-w-xl px-5 py-10 sm:py-12">
-      <div class="mb-8">
-        <p class="mb-2 text-sm font-medium tracking-wide text-gray-500">
-          UNKNOWN ARTIFACT · 001
-        </p>
+  <main class="fixed inset-0 overflow-hidden bg-black text-gray-900">
+    <!-- Background -->
+    <img
+      src="/images/vault-background.png"
+      alt=""
+      class="pointer-events-none absolute inset-0 h-full w-full select-none object-fill"
+    />
 
-        <h1 class="text-3xl font-bold tracking-tight">Alien Vault</h1>
+    <div
+      class="pointer-events-none absolute inset-0 z-10 bg-slate-950/50"
+    ></div>
 
-        <p class="mt-2 text-gray-600">
-          Select five symbols to unlock the vault.
-        </p>
+    <!-- Code slots -->
+    <template v-for="(symbolId, index) in code" :key="`slot-${index}`">
+      <div
+        v-if="layout.codeSlots[index]"
+        class="absolute flex items-center justify-center p-1"
+        :style="{
+          left: `${layout.codeSlots[index].x}%`,
+          top: `${layout.codeSlots[index].y}%`,
+          width: `${layout.codeSlots[index].width}%`,
+          height: `${layout.codeSlots[index].height}%`,
+        }"
+      >
+        <button
+          type="button"
+          class="flex h-full w-full items-center justify-center z-100 click:bg-fuchsia-600"
+          :aria-label="`Remove symbol ${index + 1}`"
+          @click="removeSymbol(index)"
+        >
+          <img
+            v-if="symbolId && alienSymbolsStore.getImage(symbolId)"
+            :src="alienSymbolsStore.getImage(symbolId)"
+            :alt="symbolId"
+            class="h-full w-full object-contain"
+          />
+
+          <span v-else class="text-4xl text-white/60">—</span>
+        </button>
       </div>
+    </template>
 
-      <section class="rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
-        <div class="mb-5 flex items-center justify-between">
-          <h2 class="font-semibold">Your sequence</h2>
+    <!-- Alien keyboard -->
+    <template v-for="(symbol, index) in symbols" :key="symbol.id">
+      <button
+        v-if="layout.keyboard[index]"
+        type="button"
+        class="absolute flex items-center justify-center z-20"
+        :style="{
+          left: `${layout.keyboard[index].x}%`,
+          top: `${layout.keyboard[index].y}%`,
+          width: `${layout.keyboard[index].width}%`,
+          height: `${layout.keyboard[index].height}%`,
+        }"
+        :disabled="isCodeComplete"
+        @click="addSymbol(symbol.id)"
+      >
+        <img
+          :src="symbol.src"
+          :alt="symbol.id"
+          class="h-full w-full object-contain"
+        />
+      </button>
+    </template>
 
-          <span class="text-sm tabular-nums text-gray-500">
-            {{ filledCount }} / {{ codeLength }}
-          </span>
-        </div>
+    <!-- Unlock button -->
+    <button
+      type="button"
+      class="absolute rounded px-4 py-6 text-sm font-bold text-white transition z-20"
+      :style="{ left: '63%', top: '77.5%' }"
+      :disabled="!isCodeComplete"
+      @click="unlockVault"
+    >
+      Unlock
+    </button>
 
-        <div class="mb-6 flex justify-center gap-2 sm:gap-3">
-          <button
-            v-for="(symbolId, index) in code"
-            :key="index"
-            type="button"
-            class="flex h-14 w-12 items-center justify-center rounded-lg border p-2 transition sm:h-16 sm:w-14"
-            :class="
-              symbolId
-                ? 'border-teal-500 bg-teal-50'
-                : 'border-gray-300 bg-gray-50 hover:border-gray-400'
-            "
-            :aria-label="
-              symbolId
-                ? `Remove symbol ${index + 1}`
-                : `Empty slot ${index + 1}`
-            "
-            @click="removeSymbol(index)"
-          >
-            <img
-              v-if="symbolId && alienSymbolsStore.getImage(symbolId)"
-              :src="alienSymbolsStore.getImage(symbolId)"
-              :alt="symbolId"
-              class="h-full w-full object-contain"
-            />
+    <!-- Clear button -->
+    <button
+      type="button"
+      class="absolute rounded px-5 py-6 text-sm font-bold text-white transition z-20"
+      :style="{ left: '56.8%', top: '77.5%' }"
+      @click="clearCode"
+    >
+      Clear
+    </button>
 
-            <span v-else class="text-xl text-gray-400">—</span>
-          </button>
-        </div>
+    <!-- Result message -->
+    <div
+      v-if="result !== null || errorMessage"
+      class="absolute left-1/2 top-5 z-30 w-[90%] max-w-md -translate-x-1/2 overflow-hidden border border-cyan-400/60 bg-cyan-400/10 p-4 text-center shadow-[0_0_15px_rgba(34,211,238,0.2),inset_0_0_20px_rgba(34,211,238,0.08)] backdrop-blur-md"
+      role="status"
+    >
+      <!-- Holographic scan line -->
+      <div
+        class="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(34,211,238,0.06)_50%)] bg-[length:100%_4px]"
+      ></div>
 
-        <div class="flex gap-3">
-          <button
-            type="button"
-            class="flex-1 rounded-lg bg-teal-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-            :disabled="!isCodeComplete"
-            @click="unlockVault"
-          >
-            Unlock vault
-          </button>
+      <!-- Top and bottom accents -->
+      <div class="absolute left-0 top-0 h-px w-1/3 bg-cyan-300"></div>
+      <div class="absolute bottom-0 right-0 h-px w-1/3 bg-cyan-300"></div>
 
-          <button
-            type="button"
-            class="rounded-lg border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-            @click="clearCode"
-          >
-            Clear
-          </button>
-        </div>
+      <p
+        class="relative mb-2 text-[10px] font-bold uppercase tracking-[0.35em] text-cyan-300/80"
+      >
+        Vault System / Status Report
+      </p>
 
-        <p
-          v-if="result !== null"
-          role="status"
-          class="mt-4 rounded-lg p-3 text-center text-sm font-medium"
-          :class="
-            result ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-          "
-        >
-          {{
-            result
-              ? "Vault unlocked! Correct code."
-              : "Incorrect code. Try again."
-          }}
-        </p>
+      <p
+        v-if="errorMessage"
+        class="relative font-mono text-sm font-bold uppercase tracking-wider text-red-400"
+      >
+        {{ errorMessage }}
+      </p>
 
-        <p
-          v-if="errorMessage"
-          role="alert"
-          class="mt-4 rounded-lg bg-red-50 p-3 text-center text-sm font-medium text-red-700"
-        >
-          {{ errorMessage }}
-        </p>
-      </section>
+      <p
+        v-else-if="result"
+        class="relative font-mono text-sm font-bold uppercase tracking-wider text-cyan-300"
+      >
+        // Vault unlocked //
+      </p>
 
-      <section class="mt-8">
-        <div class="mb-4 flex items-center justify-between">
-          <h2 class="font-semibold">Available alien symbols</h2>
-
-          <span class="text-sm text-gray-500">
-            {{ symbols.length }} symbols
-          </span>
-        </div>
-
-        <div
-          v-if="symbols.length"
-          class="grid grid-cols-4 gap-3 sm:grid-cols-5"
-        >
-          <button
-            v-for="symbol in symbols"
-            :key="symbol.id"
-            type="button"
-            class="flex aspect-square items-center justify-center rounded-lg border border-gray-200 bg-white p-3 transition hover:border-teal-500 hover:bg-teal-50 active:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
-            :disabled="isCodeComplete"
-            :aria-label="`Add symbol ${symbol.id}`"
-            @click="addSymbol(symbol.id)"
-          >
-            <img
-              :src="symbol.src"
-              :alt="symbol.id"
-              class="h-full w-full object-contain"
-            />
-          </button>
-        </div>
-
-        <p v-else class="rounded-lg bg-white p-5 text-sm text-gray-500">
-          No symbols available yet. Wait for the level to start.
-        </p>
-
-        <p class="mt-4 text-center text-sm text-gray-500">
-          Tap a symbol to add it. Tap a selected symbol to remove it.
-        </p>
-      </section>
+      <p
+        v-else
+        class="relative font-mono text-sm font-bold uppercase tracking-wider text-red-400"
+      >
+        // Access denied //
+      </p>
     </div>
   </main>
 </template>

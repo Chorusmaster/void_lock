@@ -15,19 +15,25 @@ const symbols = computed(() =>
 </script>
 
 <template>
-  <main class="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-slate-100">
-    <div class="w-full max-w-3xl text-center">
-      <p class="mb-3 text-sm uppercase tracking-[0.3em] text-slate-500">
-        Transmission sequence
-      </p>
+  <main
+    class="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-6 text-slate-100"
+  >
+    <img
+      src="/images/sequence-background.png"
+      alt=""
+      class="absolute inset-0 h-full w-full object-cover"
+    />
 
-      <h1 class="mb-12 text-3xl font-bold">Alien Code</h1>
+    <!-- Dark overlay -->
+    <div class="absolute inset-0 bg-slate-950/60"></div>
 
+    <!-- Main content -->
+    <div class="relative z-10 bottom-18 right-14 w-full max-w-3xl text-center">
       <div class="grid grid-cols-5 gap-3 sm:gap-5">
         <div
           v-for="(symbol, index) in symbols"
           :key="index"
-          class="flex aspect-square items-center justify-center rounded-2xl border border-cyan-900 bg-slate-900 p-3 shadow-lg shadow-cyan-950/20"
+          class="flex aspect-square items-center justify-center p-3 shadow-lg backdrop-blur-sm"
         >
           <img
             v-if="symbol.image"
@@ -41,10 +47,6 @@ const symbols = computed(() =>
           </span>
         </div>
       </div>
-
-      <p class="mt-10 text-sm text-slate-400">
-        Describe the symbols to your partner in the correct order.
-      </p>
     </div>
   </main>
 </template>

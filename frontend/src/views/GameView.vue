@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { socket } from "../utils/socket.ts";
 import { useGameStore } from "../stores/game";
 import { usePlayerStore } from "../stores/player";
 import { useRoute, useRouter } from "vue-router";
 import SequenceView from "./SequenceView.vue";
 import VaultView from "./VaultView.vue";
+import PlayerWebcam from "@/ui/PlayerWebcam.vue";
+import GameTimer from "@/ui/GameTimer.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -17,13 +19,6 @@ const remainingSeconds = ref(0);
 const errorMessage = ref("");
 
 let timerInterval: ReturnType<typeof setInterval> | undefined;
-
-const formattedTime = computed(() => {
-  const minutes = Math.floor(remainingSeconds.value / 60);
-  const seconds = remainingSeconds.value % 60;
-
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-});
 
 function updateTimer() {
   if (timerEndsAt.value === null) return;
@@ -146,33 +141,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="min-h-screen p-6">
-    <div class="mx-auto mb-8 w-full max-w-md">
-      <p
-        class="mb-4 text-center text-sm font-semibold uppercase tracking-widest text-cyan-400"
-      >
-        Level {{ gameStore.level }} / 3
-      </p>
-
-      <div class="mb-2 flex items-center justify-between">
-        <span class="text-sm font-medium text-gray-500"> TIME REMAINING </span>
-
-        <span
-          class="font-mono text-2xl font-bold tabular-nums"
-          :class="remainingSeconds <= 10 ? 'text-red-500' : 'text-white'"
-        >
-          {{ formattedTime }}
-        </span>
-      </div>
-
-      <div class="h-2 overflow-hidden rounded-full bg-gray-700">
-        <div
-          class="h-full rounded-full transition-[width] duration-250"
-          :class="remainingSeconds <= 10 ? 'bg-red-500' : 'bg-green-500'"
-          :style="{ width: `${Math.min(100, (remainingSeconds / 30) * 100)}%` }"
-        />
-      </div>
-    </div>
+  <PlayerWebcam class="z-10" status="ok" />
+  <main class="relative min-h-screen bg-slate-800">
+    <GameTimer :remaining-seconds="remainingSeconds" />
 
     <SequenceView v-show="playerStore.role === 'Decoder'" />
     <VaultView v-show="playerStore.role === 'Operator'" />
