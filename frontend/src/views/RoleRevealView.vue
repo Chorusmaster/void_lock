@@ -66,20 +66,22 @@ onUnmounted(() => {
 
 <template>
   <main
-    class="flex min-h-screen items-center justify-center bg-slate-950 p-3 text-slate-100 sm:p-5"
+    class="flex min-h-screen items-center justify-center bg-zinc-950 p-3 text-zinc-100 sm:p-5"
   >
     <section
-      class="w-full z-10 max-w-md rounded-2xl border border-cyan-900/70 bg-slate-900/90 p-5 text-center shadow-2xl shadow-cyan-950/20 sm:p-6"
+      class="w-full z-10 max-w-md rounded-2xl border border-emerald-900/70 bg-zinc-900/90 p-5 text-center shadow-2xl shadow-emerald-950/20 sm:p-6"
     >
-      <p class="text-xs font-medium uppercase tracking-[0.25em] text-cyan-500">
+      <p
+        class="text-xs font-medium uppercase tracking-[0.25em] text-emerald-500"
+      >
         Your assigned role
       </p>
 
-      <h1 class="mt-5 text-3xl font-bold text-slate-100">
+      <h1 class="mt-5 text-3xl font-bold text-zinc-100">
         {{ role }}
       </h1>
 
-      <p class="mt-3 text-sm leading-6 text-slate-400">
+      <p class="mt-3 text-sm leading-6 text-zinc-400">
         {{
           role === "Decoder"
             ? "Decode the alien symbols and guide your teammate."
@@ -88,16 +90,14 @@ onUnmounted(() => {
       </p>
 
       <div
-        class="mx-auto mt-7 flex size-20 items-center justify-center rounded-full border-2 border-cyan-800 bg-cyan-950/40 shadow-lg shadow-cyan-950/20"
+        class="mx-auto mt-7 flex size-20 items-center justify-center rounded-full border-2 border-emerald-800 bg-emerald-950/40 shadow-lg shadow-emerald-950/20"
       >
-        <span class="text-3xl font-semibold tabular-nums text-cyan-300">
+        <span class="text-3xl font-semibold tabular-nums text-emerald-300">
           {{ seconds }}
         </span>
       </div>
 
-      <p class="mt-4 text-sm text-slate-500">
-        Entering the game...
-      </p>
+      <p class="mt-4 text-sm text-zinc-500">Entering the game...</p>
     </section>
   </main>
 </template>

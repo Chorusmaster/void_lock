@@ -30,13 +30,17 @@ function updateTimer() {
 }
 
 function handleTimerStarted(data: { endsAt: number }) {
+  handleTimerAdjusted(data);
+
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimer, 250);
+}
+
+function handleTimerAdjusted(data: { endsAt: number }) {
   timerEndsAt.value = data.endsAt;
   gameStore.setTimerEndsAt(data.endsAt);
 
   updateTimer();
-
-  clearInterval(timerInterval);
-  timerInterval = setInterval(updateTimer, 250);
 }
 
 function handleTimerTick(data: { remainingSeconds: number }) {
@@ -115,6 +119,7 @@ onMounted(() => {
 
   socket.on("disconnect", handleDisconnect);
   socket.on("level-timer-started", handleTimerStarted);
+  socket.on("level-timer-adjusted", handleTimerAdjusted);
   socket.on("level-timer-tick", handleTimerTick);
   socket.on("game-ended", handleGameEnded);
   socket.on("game-won", handleGameWon);
@@ -131,6 +136,7 @@ onUnmounted(() => {
   socket.off("room-error", handleRoomError);
   socket.off("disconnect", handleDisconnect);
   socket.off("level-timer-started", handleTimerStarted);
+  socket.off("level-timer-adjusted", handleTimerAdjusted);
   socket.off("level-timer-tick", handleTimerTick);
   socket.off("game-ended", handleGameEnded);
   socket.off("game-won", handleGameWon);
@@ -142,7 +148,7 @@ onUnmounted(() => {
 
 <template>
   <PlayerWebcam class="z-10" status="ok" />
-  <main class="relative min-h-screen bg-slate-800">
+  <main class="relative min-h-screen bg-zinc-800">
     <GameTimer :remaining-seconds="remainingSeconds" />
 
     <SequenceView v-show="playerStore.role === 'Decoder'" />

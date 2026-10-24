@@ -4,6 +4,7 @@ import { useGameStore } from "../stores/game";
 import { useAlienSymbolsStore } from "../stores/alienSymbols";
 import { socket } from "../utils/socket";
 import { usePlayerStore } from "@/stores/player";
+import HolographicPanel from "@/ui/HolographicPanel.vue";
 
 const player = usePlayerStore();
 const gameStore = useGameStore();
@@ -123,9 +124,7 @@ const layout = {
       class="pointer-events-none absolute inset-0 h-full w-full select-none object-fill"
     />
 
-    <div
-      class="pointer-events-none absolute inset-0 z-10 bg-slate-950/50"
-    ></div>
+    <div class="pointer-events-none absolute inset-0 z-10 bg-zinc-950/50"></div>
 
     <!-- Code slots -->
     <template v-for="(symbolId, index) in code" :key="`slot-${index}`">
@@ -201,47 +200,18 @@ const layout = {
       Clear
     </button>
 
-    <!-- Result message -->
-    <div
+    <!-- Holographic result panel -->
+    <HolographicPanel
       v-if="result !== null || errorMessage"
-      class="absolute left-1/2 top-5 z-30 w-[90%] max-w-md -translate-x-1/2 overflow-hidden border border-cyan-400/60 bg-cyan-400/10 p-4 text-center shadow-[0_0_15px_rgba(34,211,238,0.2),inset_0_0_20px_rgba(34,211,238,0.08)] backdrop-blur-md"
-      role="status"
+      :status="result && !errorMessage ? 'success' : 'error'"
     >
-      <!-- Holographic scan line -->
-      <div
-        class="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(34,211,238,0.06)_50%)] bg-[length:100%_4px]"
-      ></div>
-
-      <!-- Top and bottom accents -->
-      <div class="absolute left-0 top-0 h-px w-1/3 bg-cyan-300"></div>
-      <div class="absolute bottom-0 right-0 h-px w-1/3 bg-cyan-300"></div>
-
-      <p
-        class="relative mb-2 text-[10px] font-bold uppercase tracking-[0.35em] text-cyan-300/80"
-      >
-        Vault System / Status Report
-      </p>
-
-      <p
-        v-if="errorMessage"
-        class="relative font-mono text-sm font-bold uppercase tracking-wider text-red-400"
-      >
+      <template v-if="errorMessage">
         {{ errorMessage }}
-      </p>
+      </template>
 
-      <p
-        v-else-if="result"
-        class="relative font-mono text-sm font-bold uppercase tracking-wider text-cyan-300"
-      >
-        // Vault unlocked //
-      </p>
+      <template v-else-if="result"> // Vault unlocked // </template>
 
-      <p
-        v-else
-        class="relative font-mono text-sm font-bold uppercase tracking-wider text-red-400"
-      >
-        // Access denied //
-      </p>
-    </div>
+      <template v-else> // Access denied // </template>
+    </HolographicPanel>
   </main>
 </template>

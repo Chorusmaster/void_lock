@@ -30,12 +30,12 @@ const isWinner = computed(() => route.query.result === "won");
 
 <template>
   <main
-    class="flex min-h-screen items-center justify-center bg-slate-950 p-3 text-slate-100 sm:p-5"
+    class="flex min-h-screen items-center justify-center bg-zinc-950 p-3 text-zinc-100 sm:p-5"
   >
     <section
-      class="w-full z-10 max-w-md rounded-2xl border border-cyan-900/70 bg-slate-900/90 p-5 text-center shadow-2xl shadow-cyan-950/20 sm:p-6"
+      class="w-full z-10 max-w-md rounded-2xl border border-emerald-900/70 bg-zinc-900/90 p-5 text-center shadow-2xl shadow-emerald-950/20 sm:p-6"
     >
-      <div class="mb-4 flex justify-center text-cyan-400">
+      <div class="mb-4 flex justify-center text-emerald-400">
         <Trophy v-if="isWinner" :size="48" :stroke-width="1.5" />
         <Clock3 v-else :size="48" :stroke-width="1.5" />
       </div>
@@ -44,7 +44,7 @@ const isWinner = computed(() => route.query.result === "won");
         {{ isWinner ? "Vault Unlocked!" : "Time's Up!" }}
       </h1>
 
-      <p class="mb-6 text-sm leading-6 text-slate-400">
+      <p class="mb-6 text-sm leading-6 text-zinc-400">
         {{
           isWinner
             ? "Congratulations! You cleared all 3 levels and cracked the alien code. Return to the room lobby to play again."
@@ -53,7 +53,7 @@ const isWinner = computed(() => route.query.result === "won");
       </p>
 
       <button
-        class="w-full rounded-xl border border-cyan-700 bg-cyan-950/50 px-5 py-3 text-sm font-semibold text-cyan-300 transition hover:bg-cyan-900/50"
+        class="w-full rounded-xl border border-emerald-700 bg-emerald-950/50 px-5 py-3 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-900/50"
         @click="backToLobby"
       >
         Return to Room Lobby

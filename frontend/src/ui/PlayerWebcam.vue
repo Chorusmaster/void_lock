@@ -28,6 +28,6 @@ const gameStore = useGameStore();
       />
     </div>
 
-    <p class="text-cyan-400 mt-1 tracking-widest font-mono">Level {{ gameStore.level }} / 3</p>
+    <p class="text-emerald-400 mt-1 tracking-widest font-mono">Level {{ gameStore.level }} / 3</p>
   </div>
 </template>
