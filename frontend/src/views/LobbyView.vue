@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { socket } from "../socket";
+import { socket } from "../utils/socket";
 import { usePlayerStore } from "../stores/player";
 import { useGameStore } from "@/stores/game";
 
@@ -12,6 +12,17 @@ const gameStore = useGameStore();
 interface RoomCreatedData {
   roomCode: string;
   players: string[];
+}
+
+interface RoomRestoredData {
+  roomCode: string;
+  nickname: string;
+  role: "Decoder" | "Operator" | null;
+  status: "waiting" | "revealing" | "playing";
+  level: number;
+  availableSymbols: string[];
+  roleRevealEndsAt: number | null;
+  levelEndsAt: number | null;
 }
 
 const connected = ref(false);
@@ -59,26 +70,74 @@ function goToRoom(data: RoomCreatedData) {
   });
 }
 
+function handleRoomRestored(data: RoomRestoredData) {
+  playerStore.username = data.nickname;
+  playerStore.role = data.role;
+  gameStore.setRoomCode(data.roomCode);
+
+  if (data.status === "revealing" && data.role && data.roleRevealEndsAt) {
+    gameStore.resetGame();
+    router.replace({
+      name: "role-reveal",
+      params: { roomCode: data.roomCode },
+      query: { startAt: String(data.roleRevealEndsAt) },
+    });
+    return;
+  }
+
+  if (data.status === "playing" && data.role) {
+    gameStore.setLevel({
+      level: data.level,
+      availableSymbols: data.availableSymbols,
+    });
+    gameStore.setTimerEndsAt(data.levelEndsAt);
+    router.replace({
+      name: "game",
+      params: { roomCode: data.roomCode },
+    });
+    return;
+  }
+
+  gameStore.resetGame();
+  playerStore.role = null;
+  router.replace({
+    name: "room",
+    params: { roomCode: data.roomCode },
+  });
+}
+
+function handleConnect() {
+  connected.value = true;
+}
+
+function handleDisconnect() {
+  connected.value = false;
+  roomCode.value = null;
+}
+
 onMounted(() => {
-  connected.value = socket.connected;
-  socket.connect();
-
-  socket.on("connect", () => {
-    connected.value = true;
-  });
-
-  socket.on("disconnect", () => {
-    connected.value = false;
-    roomCode.value = null;
-  });
-
+  const alreadyConnected = socket.connected;
+  connected.value = alreadyConnected;
+  socket.on("connect", handleConnect);
+  socket.on("disconnect", handleDisconnect);
+  socket.on("room-restored", handleRoomRestored);
   socket.on("room-created", goToRoom);
   socket.on("room-joined", goToRoom);
-
   socket.on("room-error", handleRoomError);
+
+  if (alreadyConnected) {
+    socket.emit("restore-room");
+  } else {
+    socket.connect();
+  }
 });
 
 onUnmounted(() => {
+  socket.off("connect", handleConnect);
+  socket.off("disconnect", handleDisconnect);
+  socket.off("room-restored", handleRoomRestored);
+  socket.off("room-created", goToRoom);
+  socket.off("room-joined", goToRoom);
   socket.off("room-error", handleRoomError);
 });
 </script>
