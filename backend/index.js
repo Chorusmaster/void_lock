@@ -1,8 +1,11 @@
 import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { getRandomSymbols, generateSequence } from "./game.js";
-import { SYMBOL_IDS } from './symbols.js'
+import { getRandomSymbols, generateSequence } from "./game.js"
+import { SYMBOL_IDS } from "./symbols.js"
+
+const LEVEL_DURATION_SECONDS = 30;
+const levelTimers = new Map();
 
 // Express setup
 const app = express();
@@ -29,7 +32,7 @@ function startRoleReveal(roomCode) {
     return;
   }
 
-  const duration = 5;
+  const duration = 3;
   const startAt = Date.now() + duration * 1000;
 
   room.status = "revealing";
@@ -66,6 +69,8 @@ function startLevel(roomCode) {
     level: room.level,
     availableSymbols: room.availableSymbols,
   });
+
+  startLevelTimer(roomCode);
 }
 
 function generateRoomCode() {
@@ -102,21 +107,22 @@ function broadcastPlayers(roomCode) {
 function assignRoles(roomCode, decoderId) {
   const room = rooms.get(roomCode);
 
-  if (!room || room.players.length !== 2 || room.rolesAssigned) {
-    return false;
-  }
-
+  if (!room || room.players.length !== 2) return false;
+  if (room.rolesAssigned) return false;
   if (!room.players.some((player) => player.id === decoderId)) {
     return false;
   }
 
   for (const player of room.players) {
     player.role = player.id === decoderId ? "Decoder" : "Operator";
+
+    io.to(player.id).emit("role-assigned", {
+      roomCode,
+      role: player.role,
+    });
   }
 
   room.rolesAssigned = true;
-  startRoleReveal(roomCode);
-
   return true;
 }
 
@@ -136,9 +142,6 @@ io.on("connection", (socket) => {
       hostId: socket.id,
       rolesAssigned: false,
       players: [{ id: socket.id, nickname }],
-      level: 0,
-      availableSymbols: [],
-      currentSequence: [],
     });
 
     socket.join(roomCode);
@@ -212,6 +215,55 @@ io.on("connection", (socket) => {
     );
   });
 
+  socket.on("generate-sequence", ({ roomCode, length } = {}) => {
+    const room = rooms.get(roomCode);
+    const player = room?.players.find(({ id }) => id === socket.id);
+
+    if (
+      !room ||
+      !socket.rooms.has(roomCode) ||
+      player?.role !== "Decoder" ||
+      room.status !== "playing" ||
+      !Number.isInteger(length) ||
+      length !== 5 ||
+      room.availableSymbols.length === 0
+    ) {
+      socket.emit("room-error", "Unable to generate the symbol sequence");
+      return;
+    }
+
+    room.currentSequence = generateSequence(room.availableSymbols, length);
+    socket.emit("sequence-generated", {
+      sequence: room.currentSequence,
+    });
+  });
+
+  socket.on("submit-code", ({ roomCode, code } = {}) => {
+    const room = rooms.get(roomCode);
+    const player = room?.players.find(({ id }) => id === socket.id);
+
+    if (!room || !socket.rooms.has(roomCode) || player?.role !== "Operator") {
+      socket.emit("room-error", "Only the Operator in this room can submit a code");
+      return;
+    }
+
+    if (
+      !Array.isArray(code) ||
+      code.length !== 5 ||
+      !code.every((symbol) => typeof symbol === "string") ||
+      room.currentSequence?.length !== 5
+    ) {
+      socket.emit("room-error", "A complete code is required after the sequence is generated");
+      return;
+    }
+
+    const isCorrect = code.every(
+      (symbol, index) => symbol === room.currentSequence[index],
+    );
+
+    socket.emit("code-result", { isCorrect });
+  });
+
   socket.on("disconnect", () => {
     const roomCode = socket.data.roomCode;
     if (!roomCode) return;
@@ -223,6 +275,8 @@ io.on("connection", (socket) => {
 
     if (room.players.length === 0) {
       rooms.delete(roomCode);
+      clearInterval(levelTimers.get(roomCode));
+      levelTimers.delete(roomCode);
     } else {
       if (room.hostId === socket.id) {
         room.hostId = room.players[0].id;
@@ -245,7 +299,10 @@ io.on("connection", (socket) => {
         "room-error",
         "Cannot assign roles. Check the players or whether roles are already assigned.",
       );
+      return;
     }
+
+    startRoleReveal(roomCode);
   });
 
   socket.on("assign-roles-random", ({ roomCode } = {}) => {
@@ -269,42 +326,58 @@ io.on("connection", (socket) => {
 
     if (!assignRoles(roomCode, decoderId)) {
       socket.emit("room-error", "Failed to assign roles");
+      return;
     }
-  });
 
-  socket.on("generate-sequence", ({ roomCode, length }) => {
-    const room = rooms.get(roomCode);
-
-    if (!room || room.availableSymbols.length === 0) return;
-    if (!Number.isInteger(length) || length < 1) return;
-
-    room.currentSequence = generateSequence(room.availableSymbols, length);
-
-    socket.emit("sequence-generated", {
-      sequence: room.currentSequence,
-    });
-  });
-
-  socket.on("submit-code", ({ roomCode, code } = {}) => {
-    const room = rooms.get(roomCode);
-
-    if (!room || !Array.isArray(code)) return;
-
-    const player = room.players.find((p) => p.id === socket.id);
-
-    if (!player || player.role !== "Operator") return;
-
-    const correctCode = room.currentSequence;
-
-    const isCorrect =
-      code.length === correctCode.length &&
-      code.every((symbol, index) => symbol === correctCode[index]);
-
-    io.to(roomCode).emit("code-result", {
-      isCorrect,
-    });
+    startRoleReveal(roomCode);
   });
 });
+
+export function startLevelTimer(roomCode) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+
+  clearInterval(levelTimers.get(roomCode));
+
+  const duration = LEVEL_DURATION_SECONDS;
+  const startAt = Date.now();
+  const endsAt = startAt + duration * 1000;
+  const level = room.level;
+
+  io.to(roomCode).emit("level-timer-started", {
+    level,
+    duration,
+    startAt,
+    endsAt,
+  });
+
+  const timer = setInterval(() => {
+    const remainingSeconds = Math.max(
+      0,
+      Math.ceil((endsAt - Date.now()) / 1000),
+    );
+
+    if (remainingSeconds === 0) {
+      clearInterval(timer);
+      levelTimers.delete(roomCode);
+
+      room.status = "level-ended";
+
+      io.to(roomCode).emit("level-timer-ended", {
+        level,
+      });
+
+      return;
+    }
+
+    io.to(roomCode).emit("level-timer-tick", {
+      level,
+      remainingSeconds,
+    });
+  }, 1000);
+
+  levelTimers.set(roomCode, timer);
+}
 
 httpServer.listen(3000, () => {
   console.log("Server listening on port 3000");

@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useGameStore } from "../stores/game";
 import { useAlienSymbolsStore } from "../stores/alienSymbols";
 import { socket } from "../socket";
-
-const result = ref<boolean | null>(null);
 
 const gameStore = useGameStore();
 const alienSymbolsStore = useAlienSymbolsStore();
 
 const codeLength = 5;
 const code = ref<(string | null)[]>(Array(codeLength).fill(null));
+const result = ref<boolean | null>(null);
+const errorMessage = ref("");
 
 const symbols = computed(() =>
   gameStore.availableSymbols
@@ -18,10 +18,19 @@ const symbols = computed(() =>
     .filter((symbol) => symbol !== undefined),
 );
 
+const filledCount = computed(
+  () => code.value.filter((symbol) => symbol !== null).length,
+);
+
+const isCodeComplete = computed(() =>
+  code.value.every((symbol) => symbol !== null),
+);
+
 function addSymbol(symbolId: string) {
   result.value = null;
 
-  const index = code.value.findIndex((s) => s === null);
+  const index = code.value.findIndex((symbol) => symbol === null);
+
   if (index !== -1) {
     code.value[index] = symbolId;
   }
@@ -38,41 +47,42 @@ function clearCode() {
 }
 
 function unlockVault() {
-  if (code.value.some((symbol) => symbol === null)) return;
+  if (!isCodeComplete.value) return;
+
+  result.value = null;
+  errorMessage.value = "";
 
   socket.emit("submit-code", {
     roomCode: gameStore.roomCode,
-    code: code.value,
+    code: [...code.value],
   });
 }
 
 function handleCodeResult(data: { isCorrect: boolean }) {
   result.value = data.isCorrect;
+  errorMessage.value = "";
+}
+
+function handleRoomError(message: string) {
+  errorMessage.value = message;
 }
 
 onMounted(() => {
   socket.on("code-result", handleCodeResult);
+  socket.on("room-error", handleRoomError);
 });
 
 onUnmounted(() => {
   socket.off("code-result", handleCodeResult);
+  socket.off("room-error", handleRoomError);
 });
 </script>
 
 <template>
   <main class="min-h-screen bg-gray-50 text-gray-900">
-    <header class="border-b border-gray-200 bg-white">
-      <div
-        class="mx-auto flex h-16 max-w-3xl items-center justify-between px-5"
-      >
-        <span class="text-lg font-bold tracking-wider">VOIDLOCK</span>
-        <span class="text-sm text-gray-500">Alien Vault</span>
-      </div>
-    </header>
-
-    <div class="mx-auto max-w-xl px-5 py-12">
+    <div class="mx-auto max-w-xl px-5 py-10 sm:py-12">
       <div class="mb-8">
-        <p class="mb-2 text-sm font-medium text-gray-500">
+        <p class="mb-2 text-sm font-medium tracking-wide text-gray-500">
           UNKNOWN ARTIFACT · 001
         </p>
 
@@ -87,8 +97,8 @@ onUnmounted(() => {
         <div class="mb-5 flex items-center justify-between">
           <h2 class="font-semibold">Your sequence</h2>
 
-          <span class="text-sm text-gray-500">
-            {{ code.filter(Boolean).length }} / {{ codeLength }}
+          <span class="text-sm tabular-nums text-gray-500">
+            {{ filledCount }} / {{ codeLength }}
           </span>
         </div>
 
@@ -116,6 +126,7 @@ onUnmounted(() => {
               :alt="symbolId"
               class="h-full w-full object-contain"
             />
+
             <span v-else class="text-xl text-gray-400">—</span>
           </button>
         </div>
@@ -124,7 +135,7 @@ onUnmounted(() => {
           <button
             type="button"
             class="flex-1 rounded-lg bg-teal-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-            :disabled="code.some((s) => s === null)"
+            :disabled="!isCodeComplete"
             @click="unlockVault"
           >
             Unlock vault
@@ -132,7 +143,7 @@ onUnmounted(() => {
 
           <button
             type="button"
-            class="rounded-lg border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            class="rounded-lg border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             @click="clearCode"
           >
             Clear
@@ -141,6 +152,7 @@ onUnmounted(() => {
 
         <p
           v-if="result !== null"
+          role="status"
           class="mt-4 rounded-lg p-3 text-center text-sm font-medium"
           :class="
             result ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
@@ -151,6 +163,14 @@ onUnmounted(() => {
               ? "Vault unlocked! Correct code."
               : "Incorrect code. Try again."
           }}
+        </p>
+
+        <p
+          v-if="errorMessage"
+          role="alert"
+          class="mt-4 rounded-lg bg-red-50 p-3 text-center text-sm font-medium text-red-700"
+        >
+          {{ errorMessage }}
         </p>
       </section>
 
@@ -163,12 +183,16 @@ onUnmounted(() => {
           </span>
         </div>
 
-        <div class="grid grid-cols-4 gap-3 sm:grid-cols-6">
+        <div
+          v-if="symbols.length"
+          class="grid grid-cols-4 gap-3 sm:grid-cols-5"
+        >
           <button
             v-for="symbol in symbols"
             :key="symbol.id"
             type="button"
-            class="flex aspect-square items-center justify-center rounded-lg border border-gray-200 bg-white p-3 transition hover:border-teal-500 hover:bg-teal-50 active:bg-teal-100"
+            class="flex aspect-square items-center justify-center rounded-lg border border-gray-200 bg-white p-3 transition hover:border-teal-500 hover:bg-teal-50 active:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="isCodeComplete"
             :aria-label="`Add symbol ${symbol.id}`"
             @click="addSymbol(symbol.id)"
           >
@@ -180,8 +204,12 @@ onUnmounted(() => {
           </button>
         </div>
 
+        <p v-else class="rounded-lg bg-white p-5 text-sm text-gray-500">
+          No symbols available yet. Wait for the level to start.
+        </p>
+
         <p class="mt-4 text-center text-sm text-gray-500">
-          Tap a symbol to add it to your sequence.
+          Tap a symbol to add it. Tap a selected symbol to remove it.
         </p>
       </section>
     </div>
