@@ -29,7 +29,7 @@ const formattedTime = computed(() => {
     <div class="h-2 overflow-hidden rounded-full bg-gray-700">
       <div
         class="h-full rounded-full transition-[width] duration-250"
-        :class="remainingSeconds <= 10 ? 'bg-red-500' : 'bg-cyan-400'"
+        :class="remainingSeconds <= 10 ? 'bg-red-500' : 'bg-emerald-400'"
         :style="{
           width: `${Math.min(100, (remainingSeconds / 30) * 100)}%`,
         }"

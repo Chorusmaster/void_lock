@@ -1,14 +1,17 @@
 import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { getRandomSymbols, generateSequence } from "./game.js";
+import { getRandomSymbols, generateSequence } from "./sockets/gameSockets.js";
 import { SYMBOL_IDS } from "./symbols.js";
+import { registerGameSockets } from "./sockets/gameSockets.js";
+import { registerRoomSockets } from "./sockets/roomSockets.js";
 
 import "dotenv/config";
 
 const LEVEL_DURATION_SECONDS = 900;
 const ROLE_REVEAL_DURATION_SECONDS = 3;
 const PLAYER_RECONNECT_GRACE_SECONDS = 30;
+const WRONG_SEQUENCE_PENALTY_SECONDS = 5;
 const MAX_LEVELS = 3;
 const levelTimers = new Map();
 
@@ -240,6 +243,19 @@ function finishGame(roomCode) {
   });
 }
 
+function endLevel(roomCode) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+
+  const level = room.level;
+
+  clearInterval(levelTimers.get(roomCode));
+  levelTimers.delete(roomCode);
+  resetRoomForLobby(room);
+
+  io.to(roomCode).emit("game-ended", { level });
+}
+
 function restorePlayer(socket) {
   const playerId = socket.data.playerId;
 
@@ -281,6 +297,30 @@ function restorePlayer(socket) {
   return false;
 }
 
+function handleDisconnect(socket, playerId) {
+  const roomCode = socket.data.roomCode;
+  const room = rooms.get(roomCode);
+  const player = room?.players.find(
+    (candidate) =>
+      candidate.id === playerId && candidate.socketId === socket.id,
+  );
+
+  if (!room || !player) return;
+
+  player.socketId = null;
+  broadcastPlayers(roomCode);
+
+  const timer = setTimeout(() => {
+    playerReconnectTimers.delete(playerId);
+
+    if (player.socketId === null) {
+      removePlayerFromRoomById(roomCode, playerId);
+    }
+  }, PLAYER_RECONNECT_GRACE_SECONDS * 1000);
+
+  playerReconnectTimers.set(playerId, timer);
+}
+
 io.on("connection", (socket) => {
   const playerId = socket.handshake.auth.playerId;
 
@@ -293,269 +333,24 @@ io.on("connection", (socket) => {
 
   console.log("Player connected:", playerId);
 
-  restorePlayer(socket);
-
-  socket.on("restore-room", () => {
-    restorePlayer(socket);
+  registerRoomSockets(socket, playerId, {
+    rooms,
+    generateRoomCode,
+    broadcastPlayers,
+    removePlayerFromRoom,
+    restorePlayer,
+    handleDisconnect,
   });
-
-  socket.on("create-room", (rawNickname) => {
-    const nickname = String(rawNickname ?? "")
-      .trim()
-      .slice(0, 20);
-
-    if (!nickname || socket.data.roomCode) return;
-
-    const roomCode = generateRoomCode();
-
-    rooms.set(roomCode, {
-      hostId: playerId,
-      rolesAssigned: false,
-      players: [
-        {
-          id: playerId,
-          socketId: socket.id,
-          nickname,
-        },
-      ],
-    });
-
-    socket.join(roomCode);
-    socket.data.roomCode = roomCode;
-    socket.data.nickname = nickname;
-
-    socket.emit("room-created", { roomCode });
-    broadcastPlayers(roomCode);
-  });
-
-  socket.on(
-    "join-room",
-    ({ roomCode: rawCode, nickname: rawNickname } = {}) => {
-      const roomCode = String(rawCode ?? "")
-        .trim()
-        .toUpperCase();
-      const nickname = String(rawNickname ?? "")
-        .trim()
-        .slice(0, 20);
-
-      if (!nickname) {
-        socket.emit("room-error", "Nickname is required");
-        return;
-      }
-
-      if (socket.data.roomCode) {
-        socket.emit("room-error", "You are already in a room");
-        return;
-      }
-
-      const room = rooms.get(roomCode);
-
-      if (!room) {
-        socket.emit("room-error", "Room not found");
-        return;
-      }
-
-      if (room.rolesAssigned || room.players.length >= 2) {
-        socket.emit("room-error", "This room is full or the game has started");
-        return;
-      }
-
-      if (room.players.some((player) => player.id === playerId)) {
-        socket.emit("room-error", "You are already in this room");
-        return;
-      }
-
-      const nicknameTaken = room.players.some(
-        (player) => player.nickname.toLowerCase() === nickname.toLowerCase(),
-      );
-
-      if (nicknameTaken) {
-        socket.emit("room-error", "This nickname is already taken");
-        return;
-      }
-
-      room.players.push({
-        id: playerId,
-        socketId: socket.id,
-        nickname,
-      });
-
-      socket.join(roomCode);
-      socket.data.roomCode = roomCode;
-      socket.data.nickname = nickname;
-
-      socket.emit("room-joined", { roomCode });
-      broadcastPlayers(roomCode);
-    },
-  );
-
-  socket.on("leave-room", () => {
-    const roomCode = socket.data.roomCode;
-    if (!roomCode) return;
-
-    removePlayerFromRoom(socket);
-    socket.leave(roomCode);
-  });
-
-  socket.on("get-players", (roomCode) => {
-    const room = rooms.get(roomCode);
-
-    if (!room || !socket.rooms.has(roomCode)) return;
-
-    socket.emit("room-info", {
-      roomCode,
-      isHost: room.hostId === playerId,
-    });
-
-    socket.emit(
-      "player-list",
-      room.players.map(({ id, nickname, socketId }) => ({
-        id,
-        nickname,
-        connected: Boolean(socketId),
-      })),
-    );
-  });
-
-  socket.on("generate-sequence", ({ roomCode, length } = {}) => {
-    const room = rooms.get(roomCode);
-    const player = room?.players.find(({ id }) => id === playerId);
-
-    if (
-      !room ||
-      !socket.rooms.has(roomCode) ||
-      player?.role !== "Decoder" ||
-      room.status !== "playing" ||
-      !Number.isInteger(length) ||
-      length !== 5 ||
-      room.availableSymbols.length === 0
-    ) {
-      socket.emit("room-error", "Unable to generate the symbol sequence");
-      return;
-    }
-
-    room.currentSequence = generateSequence(room.availableSymbols, length);
-    socket.emit("sequence-generated", {
-      sequence: room.currentSequence,
-    });
-  });
-
-  socket.on("submit-code", ({ roomCode, code } = {}) => {
-    const room = rooms.get(roomCode);
-    const player = room?.players.find(({ id }) => id === playerId);
-
-    if (
-      !room ||
-      !socket.rooms.has(roomCode) ||
-      player?.role !== "Operator" ||
-      room.status !== "playing"
-    ) {
-      socket.emit(
-        "room-error",
-        "Only the Operator in this room can submit a code",
-      );
-      return;
-    }
-
-    if (
-      !Array.isArray(code) ||
-      code.length !== 5 ||
-      !code.every((symbol) => typeof symbol === "string") ||
-      room.currentSequence?.length !== 5
-    ) {
-      socket.emit(
-        "room-error",
-        "A complete code is required after the sequence is generated",
-      );
-      return;
-    }
-
-    const isCorrect = code.every(
-      (symbol, index) => symbol === room.currentSequence[index],
-    );
-
-    if (isCorrect) {
-      socket.emit("code-result", { isCorrect: true });
-
-      if (room.level < MAX_LEVELS) {
-        startLevel(roomCode, room.level + 1);
-      } else {
-        finishGame(roomCode);
-      }
-    } else {
-      socket.emit("code-result", { isCorrect: false });
-
-    }
-  });
-
-  socket.on("disconnect", () => {
-    const roomCode = socket.data.roomCode;
-    const room = rooms.get(roomCode);
-    const player = room?.players.find(
-      (candidate) =>
-        candidate.id === playerId && candidate.socketId === socket.id,
-    );
-
-    if (!room || !player) return;
-
-    player.socketId = null;
-    broadcastPlayers(roomCode);
-
-    const timer = setTimeout(() => {
-      playerReconnectTimers.delete(playerId);
-
-      if (player.socketId === null) {
-        removePlayerFromRoomById(roomCode, playerId);
-      }
-    }, PLAYER_RECONNECT_GRACE_SECONDS * 1000);
-
-    playerReconnectTimers.set(playerId, timer);
-  });
-
-  socket.on("assign-roles-manual", ({ roomCode, decoderId } = {}) => {
-    const room = rooms.get(roomCode);
-
-    if (!room || room.hostId !== playerId) {
-      socket.emit("room-error", "Only the host can assign roles");
-      return;
-    }
-
-    if (!assignRoles(roomCode, decoderId)) {
-      socket.emit(
-        "room-error",
-        "Cannot assign roles. Check the players or whether roles are already assigned.",
-      );
-      return;
-    }
-
-    startRoleReveal(roomCode);
-  });
-
-  socket.on("assign-roles-random", ({ roomCode } = {}) => {
-    const room = rooms.get(roomCode);
-
-    if (!room || room.hostId !== playerId) {
-      socket.emit("room-error", "Only the host can assign roles");
-      return;
-    }
-
-    if (room.players.length !== 2 || room.rolesAssigned) {
-      socket.emit(
-        "room-error",
-        "Exactly two players are required and roles must not be assigned yet",
-      );
-      return;
-    }
-
-    const decoderId =
-      room.players[Math.floor(Math.random() * room.players.length)].id;
-
-    if (!assignRoles(roomCode, decoderId)) {
-      socket.emit("room-error", "Failed to assign roles");
-      return;
-    }
-
-    startRoleReveal(roomCode);
+  registerGameSockets(io, socket, playerId, {
+    rooms,
+    generateSequence,
+    startLevel,
+    startRoleReveal,
+    assignRoles,
+    finishGame,
+    endLevel,
+    maxLevels: MAX_LEVELS,
+    wrongSequencePenaltySeconds: WRONG_SEQUENCE_PENALTY_SECONDS,
   });
 });
 
@@ -582,17 +377,11 @@ export function startLevelTimer(roomCode) {
   const timer = setInterval(() => {
     const remainingSeconds = Math.max(
       0,
-      Math.ceil((endsAt - Date.now()) / 1000),
+      Math.ceil((room.levelEndsAt - Date.now()) / 1000),
     );
 
     if (remainingSeconds === 0) {
-      clearInterval(timer);
-      levelTimers.delete(roomCode);
-
-      resetRoomForLobby(room);
-
-      io.to(roomCode).emit("game-ended", { level });
-
+      endLevel(roomCode);
       return;
     }
 

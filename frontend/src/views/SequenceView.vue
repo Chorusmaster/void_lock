@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useGameStore } from '../stores/game'
-import { useAlienSymbolsStore } from '@/stores/alienSymbols'
+import { computed } from "vue";
+import { useGameStore } from "../stores/game";
+import { useAlienSymbolsStore } from "@/stores/alienSymbols";
 
-const gameStore = useGameStore()
-const alienSymbolsStore = useAlienSymbolsStore()
+const gameStore = useGameStore();
+const alienSymbolsStore = useAlienSymbolsStore();
 
 const symbols = computed(() =>
   gameStore.secretCode.map((id) => ({
     id,
     image: alienSymbolsStore.getImage(id),
   })),
-)
+);
 </script>
 
 <template>
   <main
-    class="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-6 text-slate-100"
+    class="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 p-6 text-zinc-100"
   >
     <img
       src="/images/sequence-background.png"
@@ -25,7 +25,7 @@ const symbols = computed(() =>
     />
 
     <!-- Dark overlay -->
-    <div class="absolute inset-0 bg-slate-950/60"></div>
+    <div class="absolute inset-0 bg-zinc-950/60"></div>
 
     <!-- Main content -->
     <div class="relative z-10 bottom-18 right-14 w-full max-w-3xl text-center">
@@ -33,7 +33,7 @@ const symbols = computed(() =>
         <div
           v-for="(symbol, index) in symbols"
           :key="index"
-          class="flex aspect-square items-center justify-center p-3 shadow-lg backdrop-blur-sm"
+          class="flex aspect-square items-center justify-center p-3"
         >
           <img
             v-if="symbol.image"
@@ -43,7 +43,7 @@ const symbols = computed(() =>
           />
 
           <span v-else class="text-sm text-red-400">
-            {{ symbol.id || '?' }}
+            {{ symbol.id || "?" }}
           </span>
         </div>
       </div>

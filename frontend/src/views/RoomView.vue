@@ -145,16 +145,16 @@ onUnmounted(() => {
 
 <template>
   <main
-    class="flex min-h-screen w-full items-center justify-center bg-slate-950 p-3 text-slate-100 sm:p-5"
+    class="flex min-h-screen w-full items-center justify-center bg-zinc-950 p-3 text-zinc-100 sm:p-5"
   >
     <section
-      class="flex z-10 max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-cyan-900/70 bg-slate-900/80 p-4 shadow-2xl shadow-cyan-950/20 sm:max-h-[calc(100dvh-2.5rem)] sm:p-5"
+      class="flex z-10 max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-emerald-900/70 bg-zinc-900/80 p-4 shadow-2xl shadow-emerald-950/20 sm:max-h-[calc(100dvh-2.5rem)] sm:p-5"
     >
       <header class="flex items-center justify-between gap-3">
         <h1 class="text-xl font-semibold">Game Room</h1>
 
-        <p class="shrink-0 text-sm text-slate-400">
-          <span class="font-semibold text-cyan-300"
+        <p class="shrink-0 text-sm text-zinc-400">
+          <span class="font-semibold text-emerald-300"
             >{{ players.length }}/2</span
           >
           players
@@ -164,19 +164,19 @@ onUnmounted(() => {
       <div class="flex-1 py-4">
         <section v-if="activeScreen === 'players'">
           <div
-            class="flex items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-3"
+            class="flex items-center justify-between gap-3 rounded-xl border border-zinc-700 bg-zinc-950/70 px-3 py-3"
           >
             <div class="flex min-w-0 items-center gap-3">
-              <span class="shrink-0 text-sm text-slate-400">Room code</span>
+              <span class="shrink-0 text-sm text-zinc-400">Room code</span>
               <span
-                class="truncate font-semibold tracking-widest text-cyan-300"
+                class="truncate font-semibold tracking-widest text-emerald-300"
               >
                 {{ roomCode }}
               </span>
             </div>
 
             <button
-              class="shrink-0 rounded-lg border border-cyan-800 px-3 py-1.5 text-sm text-cyan-300 transition hover:bg-cyan-950"
+              class="shrink-0 rounded-lg border border-emerald-800 px-3 py-1.5 text-sm text-emerald-300 transition hover:bg-emerald-950"
               @click="copyRoomCode"
             >
               Copy
@@ -187,10 +187,10 @@ onUnmounted(() => {
             <li
               v-for="(player, index) in players"
               :key="player.id"
-              class="flex min-w-0 items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/50 p-3"
+              class="flex min-w-0 items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-950/50 p-3"
             >
               <span
-                class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-cyan-900 bg-cyan-950/60 font-semibold text-cyan-300"
+                class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-emerald-900 bg-emerald-950/60 font-semibold text-emerald-300"
               >
                 {{ player.nickname.charAt(0).toUpperCase() }}
               </span>
@@ -199,7 +199,7 @@ onUnmounted(() => {
                 <p class="truncate text-sm font-medium">
                   {{ player.nickname }}
                 </p>
-                <p class="mt-0.5 text-xs text-slate-500">
+                <p class="mt-0.5 text-xs text-zinc-500">
                   {{
                     player.connected
                       ? index === 0
@@ -213,7 +213,7 @@ onUnmounted(() => {
 
             <li
               v-if="players.length < 2"
-              class="rounded-xl mt-4 border border-dashed border-slate-700 px-4 py-6 text-center text-sm text-slate-500"
+              class="rounded-xl mt-4 border border-dashed border-zinc-700 px-4 py-6 text-center text-sm text-zinc-500"
             >
               Waiting for teammate...
             </li>
@@ -232,7 +232,7 @@ onUnmounted(() => {
       <footer class="flex justify-end pt-3 gap-2">
         <button
           :disabled="!canStart || !isHost"
-          class="flex-1 rounded-xl border border-cyan-500/50 bg-cyan-500/10 px-4 py-3 font-semibold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-500/20 hover:shadow-lg hover:shadow-cyan-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+          class="flex-1 rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 font-semibold text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-500/20 hover:shadow-lg hover:shadow-emerald-950/40 disabled:cursor-not-allowed disabled:opacity-40"
           @click="assignRandomRoles"
         >
           Start

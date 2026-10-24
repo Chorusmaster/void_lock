@@ -144,16 +144,16 @@ onUnmounted(() => {
 
 <template>
   <main
-    class="flex min-h-screen w-full items-center justify-center bg-slate-950 p-6 text-slate-100"
+    class="flex min-h-screen w-full items-center justify-center bg-zinc-950 p-6 text-zinc-100"
   >
     <section class="w-full max-w-md z-10">
       <div
-        class="rounded-2xl border border-cyan-900/70 bg-slate-900/80 p-6 shadow-2xl shadow-cyan-950/20"
+        class="rounded-2xl border border-emerald-900/70 bg-zinc-900/80 p-6 shadow-2xl shadow-emerald-950/20"
       >
         <div class="mb-6">
           <label
             for="nickname"
-            class="mb-2 block text-sm font-medium text-slate-300"
+            class="mb-2 block text-sm font-medium text-zinc-300"
           >
             Your nickname
           </label>
@@ -164,7 +164,7 @@ onUnmounted(() => {
             placeholder="Enter your nickname"
             maxlength="20"
             required
-            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50"
+            class="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50"
           />
         </div>
 
@@ -176,15 +176,15 @@ onUnmounted(() => {
           {{ errorMessage }}
         </div>
 
-        <div class="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-slate-950 p-1">
+        <div class="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-zinc-950 p-1">
           <button
             type="button"
             @click="mode = 'create'"
             class="rounded-lg px-3 py-3 text-sm font-semibold transition"
             :class="
               mode === 'create'
-                ? 'border border-cyan-800 bg-cyan-950/60 text-cyan-300 shadow-lg shadow-cyan-950/30'
-                : 'text-slate-500 hover:text-slate-200'
+                ? 'border border-emerald-800 bg-emerald-950/60 text-emerald-300 shadow-lg shadow-emerald-950/30'
+                : 'text-zinc-500 hover:text-zinc-200'
             "
           >
             Create room
@@ -196,8 +196,8 @@ onUnmounted(() => {
             class="rounded-lg px-3 py-3 text-sm font-semibold transition"
             :class="
               mode === 'join'
-                ? 'border border-cyan-800 bg-cyan-950/60 text-cyan-300 shadow-lg shadow-cyan-950/30'
-                : 'text-slate-500 hover:text-slate-200'
+                ? 'border border-emerald-800 bg-emerald-950/60 text-emerald-300 shadow-lg shadow-emerald-950/30'
+                : 'text-zinc-500 hover:text-zinc-200'
             "
           >
             Join room
@@ -205,7 +205,7 @@ onUnmounted(() => {
         </div>
 
         <div v-if="mode === 'create'" class="space-y-5">
-          <p class="text-center text-sm leading-6 text-slate-400">
+          <p class="text-center text-sm leading-6 text-zinc-400">
             Create a secure channel and invite your partner to the mission.
           </p>
 
@@ -213,31 +213,33 @@ onUnmounted(() => {
             type="button"
             :disabled="!connected || !playerStore.username.trim()"
             @click="createRoom"
-            class="w-full rounded-xl border border-cyan-500/50 bg-cyan-500/10 px-4 py-3 font-semibold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-500/20 hover:shadow-lg hover:shadow-cyan-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+            class="w-full rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 font-semibold text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-500/20 hover:shadow-lg hover:shadow-emerald-950/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Initialize room
           </button>
 
           <div
             v-if="roomCode"
-            class="rounded-xl border border-cyan-900 bg-slate-950 p-4 text-center"
+            class="rounded-xl border border-emerald-900 bg-zinc-950 p-4 text-center"
           >
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">
+            <p class="text-xs uppercase tracking-[0.2em] text-zinc-500">
               Access code
             </p>
 
-            <p class="mt-2 text-3xl font-bold tracking-[0.35em] text-cyan-300">
+            <p
+              class="mt-2 text-3xl font-bold tracking-[0.35em] text-emerald-300"
+            >
               {{ roomCode }}
             </p>
 
-            <p class="mt-2 text-xs text-slate-500">
+            <p class="mt-2 text-xs text-zinc-500">
               Share this code with your partner
             </p>
           </div>
         </div>
 
         <form v-else @submit.prevent="joinRoom" class="space-y-5">
-          <p class="text-center text-sm leading-6 text-slate-400">
+          <p class="text-center text-sm leading-6 text-zinc-400">
             Enter your partner's access code to join the mission.
           </p>
 
@@ -246,7 +248,7 @@ onUnmounted(() => {
             placeholder="ENTER CODE"
             maxlength="6"
             required
-            class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-4 text-center text-lg uppercase tracking-[0.4em] text-cyan-300 outline-none transition placeholder:text-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50"
+            class="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-4 text-center text-lg uppercase tracking-[0.4em] text-emerald-300 outline-none transition placeholder:text-zinc-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50"
           />
 
           <button
@@ -254,13 +256,12 @@ onUnmounted(() => {
             :disabled="
               !connected || !playerStore.username.trim() || !joinCode.trim()
             "
-            class="w-full rounded-xl border border-cyan-500/50 bg-cyan-500/10 px-4 py-3 font-semibold text-cyan-300 transition hover:border-cyan-400 hover:bg-cyan-500/20 hover:shadow-lg hover:shadow-cyan-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+            class="w-full rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 font-semibold text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-500/20 hover:shadow-lg hover:shadow-emerald-950/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Connect to room
           </button>
         </form>
       </div>
     </section>
-
   </main>
 </template>
