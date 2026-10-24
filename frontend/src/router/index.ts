@@ -27,7 +27,7 @@ const router = createRouter({
       props: true,
     },
     {
-      path: '/end-game',
+      path: "/end-game/:roomCode",
       name: 'end-game',
       component: () => import("../views/EndGameView.vue"),
     }
