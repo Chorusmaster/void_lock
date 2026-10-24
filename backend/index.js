@@ -106,6 +106,37 @@ function broadcastPlayers(roomCode) {
   }
 }
 
+function removePlayerFromRoom(socket) {
+  const roomCode = socket.data.roomCode;
+  if (!roomCode) return;
+
+  const room = rooms.get(roomCode);
+  if (!room) {
+    delete socket.data.roomCode;
+    delete socket.data.nickname;
+    return;
+  }
+
+  room.players = room.players.filter((player) => player.id !== socket.id);
+
+  if (room.players.length === 0) {
+    rooms.delete(roomCode);
+    clearInterval(levelTimers.get(roomCode));
+    levelTimers.delete(roomCode);
+    clearTimeout(roleRevealTimers.get(roomCode));
+    roleRevealTimers.delete(roomCode);
+  } else {
+    if (room.hostId === socket.id) {
+      room.hostId = room.players[0].id;
+    }
+
+    broadcastPlayers(roomCode);
+  }
+
+  delete socket.data.roomCode;
+  delete socket.data.nickname;
+}
+
 function assignRoles(roomCode, decoderId) {
   const room = rooms.get(roomCode);
 
@@ -234,6 +265,14 @@ io.on("connection", (socket) => {
     },
   );
 
+  socket.on("leave-room", () => {
+    const roomCode = socket.data.roomCode;
+    if (!roomCode) return;
+
+    removePlayerFromRoom(socket);
+    socket.leave(roomCode);
+  });
+
   socket.on("get-players", (roomCode) => {
     const room = rooms.get(roomCode);
 
@@ -321,25 +360,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    const roomCode = socket.data.roomCode;
-    if (!roomCode) return;
-
-    const room = rooms.get(roomCode);
-    if (!room) return;
-
-    room.players = room.players.filter((player) => player.id !== socket.id);
-
-    if (room.players.length === 0) {
-      rooms.delete(roomCode);
-      clearInterval(levelTimers.get(roomCode));
-      levelTimers.delete(roomCode);
-    } else {
-      if (room.hostId === socket.id) {
-        room.hostId = room.players[0].id;
-      }
-
-      broadcastPlayers(roomCode);
-    }
+    removePlayerFromRoom(socket);
   });
 
   socket.on("assign-roles-manual", ({ roomCode, decoderId } = {}) => {

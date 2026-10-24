@@ -4,6 +4,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { socket } from "../socket";
 import { useRouter } from "vue-router";
 import { usePlayerStore, type PlayerRole } from "../stores/player";
+import { useGameStore } from "../stores/game";
 
 const props = defineProps<{
   roomCode: string;
@@ -11,7 +12,16 @@ const props = defineProps<{
 
 const router = useRouter();
 const playerStore = usePlayerStore();
+const gameStore = useGameStore();
 const isHost = ref(false);
+
+function leaveRoom() {
+  socket.emit("leave-room");
+  playerStore.role = null;
+  gameStore.setRoomCode("");
+  gameStore.resetGame();
+  router.replace({ name: "lobby" });
+}
 
 function handleRoomInfo(data: {
   roomCode: string;
@@ -167,7 +177,7 @@ onUnmounted(() => {
                 {{ player.nickname }}
               </p>
               <p class="text-xs text-gray-500">
-                {{ index === 0 ? "Room creator" : "Player" }}
+                {{ index === 0 ? "Room host" : "Player" }}
               </p>
             </div>
 
@@ -243,6 +253,14 @@ onUnmounted(() => {
       >
         {{ errorMessage }}
       </p>
+
+      <button
+        type="button"
+        class="mt-6 w-full rounded-lg border border-red-200 px-4 py-3 font-medium text-red-700 transition hover:bg-red-50"
+        @click="leaveRoom"
+      >
+        Leave Room
+      </button>
     </section>
   </main>
 </template>

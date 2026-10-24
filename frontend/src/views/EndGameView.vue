@@ -1,15 +1,27 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from "vue-router";
 import { computed } from "vue";
+import { socket } from "../socket";
+import { usePlayerStore } from "../stores/player";
+import { useGameStore } from "../stores/game";
 
 const router = useRouter();
 const route = useRoute();
+const playerStore = usePlayerStore();
+const gameStore = useGameStore();
 
 function backToLobby() {
   router.replace({
     name: "room",
     params: { roomCode: String(route.params.roomCode) },
   });
+}
+
+function leaveRoom() {
+  socket.emit("leave-room");
+  playerStore.role = null;
+  gameStore.setRoomCode("");
+  router.replace({ name: "lobby" });
 }
 
 const isWinner = computed(() => route.query.result === "won");
@@ -41,6 +53,13 @@ const isWinner = computed(() => route.query.result === "won");
         @click="backToLobby"
       >
         Return to Room Lobby
+      </button>
+
+      <button
+        class="mt-3 w-full rounded-xl border border-slate-700 px-5 py-3 font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white"
+        @click="leaveRoom"
+      >
+        Leave Room
       </button>
     </section>
   </main>
