@@ -47,14 +47,6 @@ function handleTimerTick(data: { remainingSeconds: number }) {
   remainingSeconds.value = data.remainingSeconds;
 }
 
-function handleTimerEnded() {
-  remainingSeconds.value = 0;
-  timerEndsAt.value = null;
-
-  clearInterval(timerInterval);
-  timerInterval = undefined;
-}
-
 function handleSequenceGenerated(data: { sequence: string[] }) {
   gameStore.setSecretCode(data.sequence);
 }
@@ -66,6 +58,19 @@ function handleRoomError(message: string) {
 function handleDisconnect() {
   router.replace({ name: "lobby" });
 }
+
+function handleGameEnded() {
+  router.replace({ name: "end-game" });
+}
+
+function handleGameWon() {
+  router.replace({
+    name: "end-game",
+    query: { result: "won" },
+  });
+}
+
+onMounted(() => {});
 
 onMounted(() => {
   if (!socket.connected) {
@@ -86,7 +91,8 @@ onMounted(() => {
   socket.on("disconnect", handleDisconnect);
   socket.on("level-timer-started", handleTimerStarted);
   socket.on("level-timer-tick", handleTimerTick);
-  socket.on("level-timer-ended", handleTimerEnded);
+  socket.on("game-ended", handleGameEnded);
+  socket.on("game-won", handleGameWon);
 });
 
 onUnmounted(() => {
@@ -95,7 +101,8 @@ onUnmounted(() => {
   socket.off("disconnect", handleDisconnect);
   socket.off("level-timer-started", handleTimerStarted);
   socket.off("level-timer-tick", handleTimerTick);
-  socket.off("level-timer-ended", handleTimerEnded);
+  socket.off("game-ended", handleGameEnded);
+  socket.off("game-won", handleGameWon);
 
   clearInterval(timerInterval);
 });
@@ -105,9 +112,7 @@ onUnmounted(() => {
   <main class="min-h-screen p-6">
     <div class="mx-auto mb-8 w-full max-w-md">
       <div class="mb-2 flex items-center justify-between">
-        <span class="text-sm font-medium text-gray-500">
-          TIME REMAINING
-        </span>
+        <span class="text-sm font-medium text-gray-500"> TIME REMAINING </span>
 
         <span
           class="font-mono text-2xl font-bold tabular-nums"
@@ -121,7 +126,7 @@ onUnmounted(() => {
         <div
           class="h-full rounded-full transition-[width] duration-250"
           :class="remainingSeconds <= 10 ? 'bg-red-500' : 'bg-green-500'"
-          :style="{ width: `${Math.min(100, remainingSeconds / 30 * 100)}%` }"
+          :style="{ width: `${Math.min(100, (remainingSeconds / 30) * 100)}%` }"
         />
       </div>
     </div>

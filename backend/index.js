@@ -1,8 +1,8 @@
 import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { getRandomSymbols, generateSequence } from "./game.js"
-import { SYMBOL_IDS } from "./symbols.js"
+import { getRandomSymbols, generateSequence } from "./game.js";
+import { SYMBOL_IDS } from "./symbols.js";
 
 const LEVEL_DURATION_SECONDS = 30;
 const levelTimers = new Map();
@@ -32,7 +32,7 @@ function startRoleReveal(roomCode) {
     return;
   }
 
-  const duration = 3;
+  const duration = 1;
   const startAt = Date.now() + duration * 1000;
 
   room.status = "revealing";
@@ -124,6 +124,22 @@ function assignRoles(roomCode, decoderId) {
 
   room.rolesAssigned = true;
   return true;
+}
+
+function finishGame(roomCode, result) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+
+  clearInterval(levelTimers.get(roomCode));
+  levelTimers.delete(roomCode);
+
+  room.status = result;
+
+  io.to(roomCode).emit("game-won", {
+    level: room.level,
+  });
+
+  rooms.delete(roomCode);
 }
 
 io.on("connection", (socket) => {
@@ -243,7 +259,10 @@ io.on("connection", (socket) => {
     const player = room?.players.find(({ id }) => id === socket.id);
 
     if (!room || !socket.rooms.has(roomCode) || player?.role !== "Operator") {
-      socket.emit("room-error", "Only the Operator in this room can submit a code");
+      socket.emit(
+        "room-error",
+        "Only the Operator in this room can submit a code",
+      );
       return;
     }
 
@@ -253,7 +272,10 @@ io.on("connection", (socket) => {
       !code.every((symbol) => typeof symbol === "string") ||
       room.currentSequence?.length !== 5
     ) {
-      socket.emit("room-error", "A complete code is required after the sequence is generated");
+      socket.emit(
+        "room-error",
+        "A complete code is required after the sequence is generated",
+      );
       return;
     }
 
@@ -261,7 +283,21 @@ io.on("connection", (socket) => {
       (symbol, index) => symbol === room.currentSequence[index],
     );
 
-    socket.emit("code-result", { isCorrect });
+    if (isCorrect) {
+      clearInterval(levelTimers.get(roomCode));
+      levelTimers.delete(roomCode);
+
+      room.status = "won";
+
+      socket.emit("code-result", { isCorrect: true });
+      io.to(roomCode).emit("game-won", {
+        level: room.level,
+      });
+
+      rooms.delete(roomCode);
+    } else {
+      socket.emit("code-result", { isCorrect: false });
+    }
   });
 
   socket.on("disconnect", () => {
@@ -361,11 +397,11 @@ export function startLevelTimer(roomCode) {
       clearInterval(timer);
       levelTimers.delete(roomCode);
 
-      room.status = "level-ended";
+      room.status = "ended";
 
-      io.to(roomCode).emit("level-timer-ended", {
-        level,
-      });
+      io.to(roomCode).emit("game-ended", { level });
+
+      rooms.delete(roomCode);
 
       return;
     }
