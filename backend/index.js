@@ -5,6 +5,7 @@ import { getRandomSymbols, generateSequence } from "./game.js";
 import { SYMBOL_IDS } from "./symbols.js";
 
 const LEVEL_DURATION_SECONDS = 30;
+const MAX_LEVELS = 3;
 const levelTimers = new Map();
 
 // Express setup
@@ -53,13 +54,13 @@ function startRoleReveal(roomCode) {
   roleRevealTimers.set(roomCode, timer);
 }
 
-function startLevel(roomCode) {
+function startLevel(roomCode, level = 1) {
   const room = rooms.get(roomCode);
 
   if (!room || room.players.length !== 2) return;
 
   room.status = "playing";
-  room.level = 1;
+  room.level = level;
   room.availableSymbols = getRandomSymbols(
     Math.min(3 + room.level, SYMBOL_IDS.length),
   );
@@ -258,7 +259,12 @@ io.on("connection", (socket) => {
     const room = rooms.get(roomCode);
     const player = room?.players.find(({ id }) => id === socket.id);
 
-    if (!room || !socket.rooms.has(roomCode) || player?.role !== "Operator") {
+    if (
+      !room ||
+      !socket.rooms.has(roomCode) ||
+      player?.role !== "Operator" ||
+      room.status !== "playing"
+    ) {
       socket.emit(
         "room-error",
         "Only the Operator in this room can submit a code",
@@ -284,17 +290,13 @@ io.on("connection", (socket) => {
     );
 
     if (isCorrect) {
-      clearInterval(levelTimers.get(roomCode));
-      levelTimers.delete(roomCode);
-
-      room.status = "won";
-
       socket.emit("code-result", { isCorrect: true });
-      io.to(roomCode).emit("game-won", {
-        level: room.level,
-      });
 
-      rooms.delete(roomCode);
+      if (room.level < MAX_LEVELS) {
+        startLevel(roomCode, room.level + 1);
+      } else {
+        finishGame(roomCode, "won");
+      }
     } else {
       socket.emit("code-result", { isCorrect: false });
     }
