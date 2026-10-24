@@ -4,6 +4,8 @@ import { Server } from "socket.io";
 import { getRandomSymbols, generateSequence } from "./game.js";
 import { SYMBOL_IDS } from "./symbols.js";
 
+import 'dotenv/config';
+
 const LEVEL_DURATION_SECONDS = 30;
 const ROLE_REVEAL_DURATION_SECONDS = 3;
 const MAX_LEVELS = 3;
@@ -20,7 +22,7 @@ app.get("/", (_req, res) => {
 // WebSocket server setup
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   },
 });
 
@@ -454,6 +456,8 @@ export function startLevelTimer(roomCode) {
   levelTimers.set(roomCode, timer);
 }
 
-httpServer.listen(3000, () => {
-  console.log("Server listening on port 3000");
+const PORT = process.env.PORT || 3000;
+
+httpServer.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
 });
