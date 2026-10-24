@@ -1,6 +1,8 @@
 import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
+import { getRandomSymbols, generateSequence } from "./game.js";
+import { SYMBOL_IDS } from './symbols.js'
 
 // Express setup
 const app = express();
@@ -18,6 +20,53 @@ const io = new Server(httpServer, {
 });
 
 const rooms = new Map();
+const roleRevealTimers = new Map();
+
+function startRoleReveal(roomCode) {
+  const room = rooms.get(roomCode);
+
+  if (!room || room.players.length !== 2 || roleRevealTimers.has(roomCode)) {
+    return;
+  }
+
+  const duration = 5;
+  const startAt = Date.now() + duration * 1000;
+
+  room.status = "revealing";
+
+  for (const player of room.players) {
+    io.to(player.id).emit("role-reveal", {
+      role: player.role,
+      startAt,
+      duration,
+    });
+  }
+
+  const timer = setTimeout(() => {
+    roleRevealTimers.delete(roomCode);
+    startLevel(roomCode);
+  }, duration * 1000);
+
+  roleRevealTimers.set(roomCode, timer);
+}
+
+function startLevel(roomCode) {
+  const room = rooms.get(roomCode);
+
+  if (!room || room.players.length !== 2) return;
+
+  room.status = "playing";
+  room.level = 1;
+  room.availableSymbols = getRandomSymbols(
+    Math.min(3 + room.level, SYMBOL_IDS.length),
+  );
+  room.currentSequence = [];
+
+  io.to(roomCode).emit("level-started", {
+    level: room.level,
+    availableSymbols: room.availableSymbols,
+  });
+}
 
 function generateRoomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -53,22 +102,21 @@ function broadcastPlayers(roomCode) {
 function assignRoles(roomCode, decoderId) {
   const room = rooms.get(roomCode);
 
-  if (!room || room.players.length !== 2) return false;
-  if (room.rolesAssigned) return false;
+  if (!room || room.players.length !== 2 || room.rolesAssigned) {
+    return false;
+  }
+
   if (!room.players.some((player) => player.id === decoderId)) {
     return false;
   }
 
   for (const player of room.players) {
     player.role = player.id === decoderId ? "Decoder" : "Operator";
-
-    io.to(player.id).emit("role-assigned", {
-      roomCode,
-      role: player.role,
-    });
   }
 
   room.rolesAssigned = true;
+  startRoleReveal(roomCode);
+
   return true;
 }
 
@@ -88,6 +136,9 @@ io.on("connection", (socket) => {
       hostId: socket.id,
       rolesAssigned: false,
       players: [{ id: socket.id, nickname }],
+      level: 0,
+      availableSymbols: [],
+      currentSequence: [],
     });
 
     socket.join(roomCode);
@@ -219,6 +270,39 @@ io.on("connection", (socket) => {
     if (!assignRoles(roomCode, decoderId)) {
       socket.emit("room-error", "Failed to assign roles");
     }
+  });
+
+  socket.on("generate-sequence", ({ roomCode, length }) => {
+    const room = rooms.get(roomCode);
+
+    if (!room || room.availableSymbols.length === 0) return;
+    if (!Number.isInteger(length) || length < 1) return;
+
+    room.currentSequence = generateSequence(room.availableSymbols, length);
+
+    socket.emit("sequence-generated", {
+      sequence: room.currentSequence,
+    });
+  });
+
+  socket.on("submit-code", ({ roomCode, code } = {}) => {
+    const room = rooms.get(roomCode);
+
+    if (!room || !Array.isArray(code)) return;
+
+    const player = room.players.find((p) => p.id === socket.id);
+
+    if (!player || player.role !== "Operator") return;
+
+    const correctCode = room.currentSequence;
+
+    const isCorrect =
+      code.length === correctCode.length &&
+      code.every((symbol, index) => symbol === correctCode[index]);
+
+    io.to(roomCode).emit("code-result", {
+      isCorrect,
+    });
   });
 });
 

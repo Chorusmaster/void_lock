@@ -1,5 +1,10 @@
+
 <script setup lang="ts">
-const secretCode = ['⌘', '⟁', '⋔', '⍟', '⌖']
+import { useGameStore } from '../stores/game'
+import { useAlienSymbolsStore } from '@/stores/alienSymbols';
+
+const gameStore = useGameStore()
+const alienSymbolsStore = useAlienSymbolsStore()
 </script>
 
 <template>
@@ -17,11 +22,20 @@ const secretCode = ['⌘', '⟁', '⋔', '⍟', '⌖']
 
       <div class="grid grid-cols-5 gap-3 sm:gap-5">
         <div
-          v-for="(symbol, index) in secretCode"
+          v-for="(symbolId, index) in gameStore.secretCode"
           :key="index"
-          class="flex aspect-square items-center justify-center rounded-2xl border border-cyan-900 bg-slate-900 text-4xl text-cyan-300 shadow-lg shadow-cyan-950/20 sm:text-6xl"
+          class="flex aspect-square items-center justify-center rounded-2xl border border-cyan-900 bg-slate-900 p-3 shadow-lg shadow-cyan-950/20"
         >
-          {{ symbol }}
+          <img
+            v-if="alienSymbolsStore.getImage(symbolId)"
+            :src="alienSymbolsStore.getImage(symbolId)"
+            :alt="symbolId"
+            class="h-full w-full object-contain"
+          />
+
+          <span v-else class="text-sm text-red-400">
+            ?
+          </span>
         </div>
       </div>
 
