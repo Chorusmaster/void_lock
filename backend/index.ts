@@ -19,10 +19,11 @@ import "dotenv/config";
 
 const ROLE_REVEAL_DURATION_SECONDS = 3;
 const PLAYER_RECONNECT_GRACE_SECONDS = 30;
-const WRONG_SEQUENCE_PENALTY_SECONDS = 5;
-const LEVEL_DURATION_SECONDS = 100;
+const WRONG_SEQUENCE_PENALTY_SECONDS = 15;
 interface LevelDefinition {
   level: number;
+  durationSeconds: number;
+  glitchIntensity: number;
   symbols: SymbolCounts;
 }
 
@@ -33,6 +34,22 @@ const levelTimers = new Map<string, NodeJS.Timeout>();
 for (const [index, level] of LEVELS.entries()) {
   if (level.level !== index + 1) {
     throw new Error("Level configuration must use consecutive level numbers");
+  }
+
+  if (!Number.isFinite(level.durationSeconds) || level.durationSeconds <= 0) {
+    throw new Error(
+      `Invalid duration for level ${level.level}: ${level.durationSeconds}`,
+    );
+  }
+
+  if (
+    !Number.isFinite(level.glitchIntensity) ||
+    level.glitchIntensity < 0 ||
+    level.glitchIntensity > 1
+  ) {
+    throw new Error(
+      `Invalid glitch intensity for level ${level.level}: ${level.glitchIntensity}`,
+    );
   }
 
   for (const category of ["easy", "medium", "hard"] as const) {
@@ -67,9 +84,11 @@ app.get("/", (_req, res) => {
 });
 
 // WebSocket server setup
+const corsOrigins = process.env.CORS_ORIGINS?.split(",") ?? [];
+
 const io: GameServer = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL,
+    origin: corsOrigins,
   },
 });
 
@@ -130,6 +149,7 @@ function startLevel(roomCode: string, level = 1) {
   io.to(roomCode).emit("level-started", {
     level: room.level,
     availableSymbols: room.availableSymbols,
+    glitchIntensity: levelDefinition.glitchIntensity,
   });
 
   startLevelTimer(roomCode);
@@ -350,6 +370,7 @@ function restorePlayer(socket: GameSocket): boolean {
       status: room.status ?? "waiting",
       level: room.level ?? 0,
       availableSymbols: room.availableSymbols ?? [],
+      glitchIntensity: LEVELS[room.level - 1]?.glitchIntensity ?? 0.5,
       roleRevealEndsAt: room.roleRevealEndsAt ?? null,
       levelEndsAt: room.levelEndsAt ?? null,
     });
@@ -435,7 +456,7 @@ export function startLevelTimer(roomCode: string) {
 
   clearInterval(levelTimers.get(roomCode));
 
-  const duration = LEVEL_DURATION_SECONDS;
+  const duration = LEVELS[room.level - 1]!.durationSeconds;
   const startAt = Date.now();
   const endsAt = startAt + duration * 1000;
   const level = room.level;

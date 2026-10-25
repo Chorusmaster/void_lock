@@ -33,9 +33,32 @@ watch(
 
 const symbols = computed(() =>
   gameStore.availableSymbols
-    .map((id) => alienSymbolsStore.getSymbol(id))
-    .filter((symbol) => symbol !== undefined),
+    .map((id) => ({
+      id,
+      src: alienSymbolsStore.getImage(id),
+    })),
 );
+
+const keyboardPositions = [
+  { left: 34.5, top: 60.25, size: 5 },
+  { left: 39.7, top: 60.25, size: 5 },
+  { left: 44.9, top: 60.25, size: 5 },
+  { left: 50.1, top: 60.25, size: 5 },
+  { left: 55.3, top: 60.25, size: 5 },
+  { left: 60.5, top: 60.5, size: 5 },
+
+  { left: 34, top: 69.75, size: 5 },
+  { left: 39.5, top: 69.75, size: 5 },
+  { left: 44.9, top: 69.75, size: 5 },
+  { left: 50.1, top: 69.75, size: 5 },
+  { left: 55.3, top: 69.75, size: 5 },
+  { left: 60.5, top: 69.75, size: 5 },
+
+  { left: 33.5, top: 79.25, size: 5 },
+  { left: 39.2, top: 79.25, size: 5 },
+  { left: 44.7, top: 79.25, size: 5 },
+  { left: 50.5, top: 79.25, size: 5 },
+];
 
 const isCodeComplete = computed(() =>
   code.value.every((symbol) => symbol !== null),
@@ -116,15 +139,6 @@ const layout = {
     { x: 47, y: 18, width: 8, height: 18 },
     { x: 58, y: 18, width: 8, height: 18 },
     { x: 70, y: 18, width: 8, height: 18 },
-  ],
-
-  keyboard: [
-    { x: 34.5, y: 61, width: 5, height: 5 },
-    { x: 39.5, y: 61, width: 5, height: 5 },
-    { x: 45, y: 61, width: 5, height: 5 },
-    { x: 50, y: 61, width: 5, height: 5 },
-    { x: 55.5, y: 61, width: 5, height: 5 },
-    { x: 60.5, y: 61, width: 5, height: 5 },
   ],
 };
 
@@ -211,23 +225,24 @@ onUnmounted(() => {
       <!-- Alien keyboard -->
       <template v-for="(symbol, index) in symbols" :key="symbol.id">
         <button
-          v-if="layout.keyboard[index]"
           type="button"
           class="absolute z-20 flex items-center justify-center"
           :style="{
-            left: `${layout.keyboard[index].x}%`,
-            top: `${layout.keyboard[index].y}%`,
-            width: `${layout.keyboard[index].width}%`,
-            height: `${layout.keyboard[index].height}%`,
+            left: `${keyboardPositions[index]?.left}%`,
+            top: `${keyboardPositions[index]?.top}%`,
+            width: `${keyboardPositions[index]?.size}%`,
+            height: `${keyboardPositions[index]?.size}%`,
           }"
           :disabled="isCodeComplete"
           @click="addSymbol(symbol.id)"
         >
           <img
+            v-if="symbol.src"
             :src="symbol.src"
             :alt="symbol.id"
             class="h-full w-full object-contain select-none"
           />
+          <span v-else class="text-xs text-white">{{ symbol.id }}</span>
         </button>
       </template>
 

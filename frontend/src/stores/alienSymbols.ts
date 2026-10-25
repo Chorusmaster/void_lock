@@ -1,4 +1,3 @@
-
 import { defineStore } from 'pinia'
 
 export interface AlienSymbol {
@@ -17,48 +16,33 @@ const images = import.meta.glob(
 ) as Record<string, string>
 
 export const useAlienSymbolsStore = defineStore('alienSymbols', () => {
-  const symbols: AlienSymbol[] = Object.entries(images)
-    .map(([path, src]) => {
-      const pathParts = path.split('/')
-      const categoryName = pathParts.at(-2)
-      const filename = pathParts.at(-1)
-      let category: AlienSymbol['category']
-      if (
-        categoryName === 'easy' ||
-        categoryName === 'medium' ||
-        categoryName === 'hard'
-      ) {
-        category = categoryName
-      } else {
-        throw new Error(`Unknown symbol category in asset path: ${path}`)
+  const symbols: AlienSymbol[] = Object.entries(images).map(
+    ([path, src]) => {
+      const [, category, filename] = path.match(
+        /\/(easy|medium|hard)\/([^/]+)$/,
+      )!
+
+      if (!filename) {
+        throw new Error(`Invalid symbol asset path`)
       }
 
-      const id = filename?.replace(/\.[^.]+$/, '')
-      if (!id) throw new Error(`Invalid symbol asset path: ${path}`)
+      const id = `${category}/${filename.replace(/\.[^.]+$/, '')}`
 
       return {
-        id: `${category}/${id}`,
-        category,
+        id,
+        category: category as AlienSymbol['category'],
         src,
       }
-    })
-    .sort((a, b) => a.id.localeCompare(b.id))
-
-  const symbolsById = new Map(
-    symbols.map((symbol) => [symbol.id, symbol]),
+    },
   )
 
-  function getSymbol(id: string): AlienSymbol | undefined {
-    return symbolsById.get(id)
+  function getSymbol(id: string) {
+    return symbols.find((symbol) => symbol.id === id)
   }
 
-  function getImage(id: string): string | undefined {
+  function getImage(id: string) {
     return getSymbol(id)?.src
   }
 
-  return {
-    symbols,
-    getSymbol,
-    getImage,
-  }
+  return { symbols, getSymbol, getImage }
 })

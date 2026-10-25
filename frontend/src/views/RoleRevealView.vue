@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { socket } from "../utils/socket";
-import { usePlayerStore, type PlayerRole } from "../stores/player";
-import { useGameStore } from "../stores/game";
-
-const gameStore = useGameStore();
+import { usePlayerStore } from "../stores/player";
 
 const route = useRoute();
 const router = useRouter();
@@ -16,26 +12,6 @@ const role = computed(() => playerStore.role ?? "");
 const roomCode = computed(() => String(route.params.roomCode ?? ""));
 
 let timer: ReturnType<typeof setInterval> | undefined;
-
-function handleStartLevel(data: { level: number; availableSymbols: string[] }) {
-  if (timer) clearInterval(timer);
-
-  gameStore.setLevel(data);
-
-  router.replace({
-    name: "game",
-    params: { roomCode: roomCode.value },
-  });
-}
-
-function handleRoomReset() {
-  playerStore.role = null;
-  gameStore.resetGame();
-  router.replace({
-    name: "room",
-    params: { roomCode: roomCode.value },
-  });
-}
 
 onMounted(() => {
   const startAt = Number(route.query.startAt);
@@ -52,14 +28,9 @@ onMounted(() => {
   updateCountdown();
   timer = setInterval(updateCountdown, 100);
 
-  socket.on("level-started", handleStartLevel);
-  socket.on("room-reset", handleRoomReset);
 });
 
 onUnmounted(() => {
-  socket.off("level-started", handleStartLevel);
-  socket.off("room-reset", handleRoomReset);
-
   if (timer) clearInterval(timer);
 });
 </script>

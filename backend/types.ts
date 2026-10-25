@@ -75,6 +75,7 @@ export interface ServerToClientEvents {
   "level-started": (payload: {
     level: number;
     availableSymbols: SymbolId[];
+    glitchIntensity: number;
   }) => void;
   "player-list": (
     players: Array<{ id: string; nickname: string; connected: boolean }>,
@@ -92,6 +93,7 @@ export interface ServerToClientEvents {
     status: RoomStatus;
     level: number;
     availableSymbols: SymbolId[];
+    glitchIntensity: number;
     roleRevealEndsAt: number | null;
     levelEndsAt: number | null;
   }) => void;

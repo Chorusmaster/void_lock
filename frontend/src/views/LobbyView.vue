@@ -1,33 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { computed, ref, onMounted, onUnmounted } from "vue";
 import { socket } from "../utils/socket";
 import { usePlayerStore } from "../stores/player";
 import { useGameStore } from "@/stores/game";
-import AlienMatrix from '@/ui/AlienMatrix.vue'
 
-const router = useRouter();
 const playerStore = usePlayerStore();
 const gameStore = useGameStore();
 
-interface RoomCreatedData {
-  roomCode: string;
-  players: string[];
-}
-
-interface RoomRestoredData {
-  roomCode: string;
-  nickname: string;
-  role: "Decoder" | "Operator" | null;
-  status: "waiting" | "revealing" | "playing";
-  level: number;
-  availableSymbols: string[];
-  roleRevealEndsAt: number | null;
-  levelEndsAt: number | null;
-}
-
 const connected = ref(false);
-const roomCode = ref<string | null>(null);
 const joinCode = ref("");
 const mode = ref<"create" | "join">("create");
 const errorMessage = ref("");
@@ -61,59 +41,13 @@ function handleRoomError(message: string) {
   errorMessage.value = message;
 }
 
-function goToRoom(data: RoomCreatedData) {
-  roomCode.value = data.roomCode;
-  gameStore.setRoomCode(roomCode.value);
-
-  router.push({
-    name: "room",
-    params: { roomCode: data.roomCode },
-  });
-}
-
-function handleRoomRestored(data: RoomRestoredData) {
-  playerStore.username = data.nickname;
-  playerStore.role = data.role;
-  gameStore.setRoomCode(data.roomCode);
-
-  if (data.status === "revealing" && data.role && data.roleRevealEndsAt) {
-    gameStore.resetGame();
-    router.replace({
-      name: "role-reveal",
-      params: { roomCode: data.roomCode },
-      query: { startAt: String(data.roleRevealEndsAt) },
-    });
-    return;
-  }
-
-  if (data.status === "playing" && data.role) {
-    gameStore.setLevel({
-      level: data.level,
-      availableSymbols: data.availableSymbols,
-    });
-    gameStore.setTimerEndsAt(data.levelEndsAt);
-    router.replace({
-      name: "game",
-      params: { roomCode: data.roomCode },
-    });
-    return;
-  }
-
-  gameStore.resetGame();
-  playerStore.role = null;
-  router.replace({
-    name: "room",
-    params: { roomCode: data.roomCode },
-  });
-}
-
 function handleConnect() {
   connected.value = true;
 }
 
 function handleDisconnect() {
   connected.value = false;
-  roomCode.value = null;
+  gameStore.setRoomCode("");
 }
 
 onMounted(() => {
@@ -121,10 +55,8 @@ onMounted(() => {
   connected.value = alreadyConnected;
   socket.on("connect", handleConnect);
   socket.on("disconnect", handleDisconnect);
-  socket.on("room-restored", handleRoomRestored);
-  socket.on("room-created", goToRoom);
-  socket.on("room-joined", goToRoom);
   socket.on("room-error", handleRoomError);
+  socket.emit("entered_lobby");
 
   if (alreadyConnected) {
     socket.emit("restore-room");
@@ -136,9 +68,6 @@ onMounted(() => {
 onUnmounted(() => {
   socket.off("connect", handleConnect);
   socket.off("disconnect", handleDisconnect);
-  socket.off("room-restored", handleRoomRestored);
-  socket.off("room-created", goToRoom);
-  socket.off("room-joined", goToRoom);
   socket.off("room-error", handleRoomError);
 });
 </script>
@@ -218,23 +147,6 @@ onUnmounted(() => {
           >
             Initialize room
           </button>
-
-          <div
-            v-if="roomCode"
-            class="rounded-xl border border-emerald-900 bg-zinc-950 p-4 text-center"
-          >
-            <p class="text-xs uppercase tracking-[0.2em] text-zinc-500">
-              Access code
-            </p>
-
-            <p class="mt-2 text-3xl font-bold tracking-[0.35em] text-emerald-300">
-              {{ roomCode }}
-            </p>
-
-            <p class="mt-2 text-xs text-zinc-500">
-              Share this code with your partner
-            </p>
-          </div>
         </div>
 
         <form v-else @submit.prevent="joinRoom" class="space-y-5">
@@ -262,7 +174,5 @@ onUnmounted(() => {
         </form>
       </div>
     </section>
-
-    <AlienMatrix />
   </main>
 </template>

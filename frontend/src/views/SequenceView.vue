@@ -6,7 +6,7 @@ import { useAlienSymbolsStore } from "@/stores/alienSymbols";
 const gameStore = useGameStore();
 const alienSymbolsStore = useAlienSymbolsStore();
 
-const glitchIntensity = ref(0.5);
+const props = defineProps<{ glitchIntensity: number }>();
 const cutoutMaskId = useId();
 
 const symbols = computed(() =>
@@ -35,7 +35,7 @@ function random(min: number, max: number) {
 }
 
 function createCutouts(): Cutout[] {
-  const intensity = Math.max(0, Math.min(1, glitchIntensity.value));
+  const intensity = Math.max(0, Math.min(1, props.glitchIntensity));
 
   if (intensity === 0) return [];
 
@@ -55,7 +55,7 @@ function createCutouts(): Cutout[] {
 }
 
 function updateGlitches() {
-  const intensity = Math.max(0, Math.min(1, glitchIntensity.value));
+  const intensity = Math.max(0, Math.min(1, props.glitchIntensity));
   glitchStates.value = symbols.value.map(() => ({
     cutouts: Math.random() < intensity ? createCutouts() : [],
   }));
@@ -71,11 +71,14 @@ watch(
   { immediate: true },
 );
 
-watch(glitchIntensity, () => {
-  glitchStates.value = symbols.value.map(() => ({
-    cutouts: createCutouts(),
-  }));
-});
+watch(
+  () => props.glitchIntensity,
+  () => {
+    glitchStates.value = symbols.value.map(() => ({
+      cutouts: createCutouts(),
+    }));
+  },
+);
 
 onMounted(() => {
   updateGlitches();
@@ -147,7 +150,7 @@ onUnmounted(() => {
             <img
               :src="symbol.image"
               :alt="symbol.id"
-              class="h-full w-full object-contain"
+              class="h-full w-full object-contain select-none"
               :style="{
                 mask: `url(#${cutoutMaskId}-${index})`,
                 WebkitMask: `url(#${cutoutMaskId}-${index})`,
