@@ -35,7 +35,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="absolute left-1/2 top-5 z-30 w-[90%] max-w-md -tranzinc-x-1/2 overflow-hidden border p-4 text-center backdrop-blur-md"
+    class="absolute left-1/2 top-5 z-30 w-[90%] max-w-md -translate-x-1/2 overflow-hidden border p-4 text-center backdrop-blur-md"
     :class="
       status === 'success'
         ? 'border-emerald-400/60 bg-emerald-400/10 shadow-[0_0_15px_rgba(16,185,129,0.2),inset_0_0_20px_rgba(16,185,129,0.08)]'
