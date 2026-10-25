@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { socket } from "../utils/socket";
 import { usePlayerStore } from "../stores/player";
 import { useGameStore } from "@/stores/game";
+import AlienMatrix from '@/ui/AlienMatrix.vue'
 
 const router = useRouter();
 const playerStore = usePlayerStore();
@@ -226,9 +227,7 @@ onUnmounted(() => {
               Access code
             </p>
 
-            <p
-              class="mt-2 text-3xl font-bold tracking-[0.35em] text-emerald-300"
-            >
+            <p class="mt-2 text-3xl font-bold tracking-[0.35em] text-emerald-300">
               {{ roomCode }}
             </p>
 
@@ -263,5 +262,7 @@ onUnmounted(() => {
         </form>
       </div>
     </section>
+
+    <AlienMatrix />
   </main>
 </template>

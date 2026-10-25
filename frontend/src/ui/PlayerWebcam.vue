@@ -297,11 +297,7 @@ onUnmounted(() => {
       "
     >
       <img
-        :src="
-          player.mood.value === 'ok'
-            ? '/images/player1-ok.png'
-            : '/images/player1-fail.png'
-        "
+        :src="`/images/${ player.role.value === 'Operator' ? 'operator' : 'decoder' }-${player.mood.value}.png`"
         :alt="player.mood.value === 'ok' ? 'Player OK' : 'Player FAIL'"
         class="w-full h-full object-cover"
       />

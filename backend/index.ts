@@ -6,8 +6,9 @@ import {
   getRandomSymbols,
   registerGameSockets,
 } from "./sockets/gameSockets.js";
-import { SYMBOL_IDS } from "./symbols.js";
+import { SYMBOLS_BY_CATEGORY, type SymbolCounts } from "./symbols.js";
 import { registerRoomSockets } from "./sockets/roomSockets.js";
+import levelDefinitions from "./levels.json" with { type: "json" };
 import type {
   GameServer,
   GameSocket,
@@ -16,12 +17,46 @@ import type {
 
 import "dotenv/config";
 
-const LEVEL_DURATION_SECONDS = 30;
 const ROLE_REVEAL_DURATION_SECONDS = 3;
 const PLAYER_RECONNECT_GRACE_SECONDS = 30;
 const WRONG_SEQUENCE_PENALTY_SECONDS = 5;
-const MAX_LEVELS = 3;
+const LEVEL_DURATION_SECONDS = 100;
+interface LevelDefinition {
+  level: number;
+  symbols: SymbolCounts;
+}
+
+const LEVELS: LevelDefinition[] = levelDefinitions;
+const MAX_LEVELS = LEVELS.length;
 const levelTimers = new Map<string, NodeJS.Timeout>();
+
+for (const [index, level] of LEVELS.entries()) {
+  if (level.level !== index + 1) {
+    throw new Error("Level configuration must use consecutive level numbers");
+  }
+
+  for (const category of ["easy", "medium", "hard"] as const) {
+    const count = level.symbols[category];
+    if (
+      !Number.isInteger(count) ||
+      count < 0 ||
+      count > SYMBOLS_BY_CATEGORY[category].length
+    ) {
+      throw new Error(
+        `Invalid ${category} symbol count for level ${level.level}: ${count}`,
+      );
+    }
+  }
+
+  if (Object.values(level.symbols).every((count) => count === 0)) {
+    throw new Error(`Level ${level.level} must include at least one symbol`);
+  }
+
+}
+
+if (LEVELS.length === 0) {
+  throw new Error("At least one level must be configured");
+}
 
 // Express setup
 const app = express();
@@ -81,12 +116,15 @@ function startLevel(roomCode: string, level = 1) {
 
   if (!room || room.players.length !== 2) return;
 
+  const levelDefinition = LEVELS[level - 1];
+  if (!levelDefinition || levelDefinition.level !== level) {
+    throw new Error(`No symbol configuration found for level ${level}`);
+  }
+
   room.status = "playing";
   room.level = level;
   room.roleRevealEndsAt = null;
-  room.availableSymbols = getRandomSymbols(
-    Math.min(3 + room.level, SYMBOL_IDS.length),
-  );
+  room.availableSymbols = getRandomSymbols(levelDefinition.symbols);
   room.currentSequence = [];
 
   io.to(roomCode).emit("level-started", {
