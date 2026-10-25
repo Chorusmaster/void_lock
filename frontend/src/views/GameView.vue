@@ -17,6 +17,7 @@ const playerStore = usePlayerStore();
 const timerEndsAt = ref<number | null>(null);
 const remainingSeconds = ref(0);
 const errorMessage = ref("");
+const errorTrigger = ref(0);
 
 let timerInterval: ReturnType<typeof setInterval> | undefined;
 
@@ -67,6 +68,7 @@ function handleLevelStarted(data: {
 
 function handleRoomError(message: string) {
   errorMessage.value = message;
+  errorTrigger.value++;
 }
 
 function handleDisconnect() {
@@ -155,8 +157,11 @@ onUnmounted(() => {
   <main class="relative min-h-screen bg-zinc-800">
     <GameTimer :remaining-seconds="remainingSeconds" />
 
-    <SequenceView v-show="playerStore.role === 'Decoder'" />
-    <VaultView v-show="playerStore.role === 'Operator'" />
+    <SequenceView
+      v-show="playerStore.role === 'Decoder'"
+      :glitch-intensity="0.5"
+    />
+    <VaultView :error-trigger="errorTrigger" v-show="playerStore.role === 'Operator'" />
 
     <p
       v-if="errorMessage"

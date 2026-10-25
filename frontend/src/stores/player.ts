@@ -7,6 +7,7 @@ export const usePlayerStore = defineStore("player", () => {
   const storedUsername = localStorage.getItem("username") ?? "";
   const usernameState = ref(storedUsername);
   const mood = ref<"ok" | "fail">("ok");
+  let failTimeout: ReturnType<typeof setTimeout> | undefined;
 
   const username = computed({
     get: () => usernameState.value,
@@ -16,12 +17,17 @@ export const usePlayerStore = defineStore("player", () => {
     },
   });
 
-  function triggerFail() {
+  function triggerFail(duration = 1000) {
+    if (failTimeout) {
+      clearTimeout(failTimeout);
+    }
+
     mood.value = "fail";
 
-    setTimeout(() => {
+    failTimeout = setTimeout(() => {
       mood.value = "ok";
-    }, 1000);
+      failTimeout = undefined;
+    }, duration);
   }
 
   const role = ref<PlayerRole | null>(null);

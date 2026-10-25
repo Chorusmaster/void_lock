@@ -18,6 +18,10 @@ const code = ref<(string | null)[]>(Array(codeLength).fill(null));
 const result = ref<boolean | null>(null);
 const errorMessage = ref("");
 
+const props = defineProps<{
+  errorTrigger: number;
+}>();
+
 watch(
   () => gameStore.level,
   () => {
@@ -77,13 +81,20 @@ function unlockVault() {
 
 function handleCodeResult(data: { isCorrect: boolean }) {
   result.value = data.isCorrect;
-  if (!data.isCorrect) player.triggerFail();
+
+  if (!data.isCorrect) {
+    player.triggerFail(600);
+    flashRed();
+  }
+
   errorMessage.value = "";
 }
 
 function handleRoomError(message: string) {
   errorSound.currentTime = 0;
   errorSound.play();
+  player.triggerFail(600);
+  flashRed();
 
   errorMessage.value = message;
 }
@@ -116,9 +127,34 @@ const layout = {
     { x: 60.5, y: 61, width: 5, height: 5 },
   ],
 };
+
+
+const isRedFlashing = ref(false);
+let flashTimeout: ReturnType<typeof setTimeout> | undefined;
+
+function flashRed() {
+  if (flashTimeout) clearTimeout(flashTimeout);
+
+  isRedFlashing.value = true;
+
+  flashTimeout = setTimeout(() => {
+    isRedFlashing.value = false;
+    flashTimeout = undefined;
+  }, 600);
+}
+
+watch(
+  () => props.errorTrigger,
+  () => flashRed(),
+);
+
+onUnmounted(() => {
+  if (flashTimeout) clearTimeout(flashTimeout);
+});
 </script>
 
 <template>
+  
   <main class="fixed inset-0 overflow-hidden bg-black text-gray-900">
     <div
       class="absolute left-1/2 top-1/2"
@@ -133,6 +169,12 @@ const layout = {
         alt=""
         class="pointer-events-none absolute inset-0 h-full w-full select-none"
       />
+
+      <div
+        class="pointer-events-none absolute inset-0 z-5 bg-red-600 transition-opacity duration-150"
+        :class="isRedFlashing ? 'opacity-20' : 'opacity-0'"
+      >
+      </div>
 
       <div class="pointer-events-none absolute inset-0 z-10 bg-zinc-950/50"></div>
 
