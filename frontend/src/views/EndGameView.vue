@@ -35,7 +35,9 @@ const isWinner = computed(() => route.query.result === "won");
     <section
       class="w-full z-10 max-w-md rounded-2xl border border-emerald-900/70 bg-zinc-900/90 p-5 text-center shadow-2xl shadow-emerald-950/20 sm:p-6"
     >
-      <div class="mb-4 flex justify-center text-emerald-400">
+      <div
+        :class="`mb-4 flex justify-center ${isWinner ? 'text-emerald-400' : 'text-red-400'}`"
+      >
         <Trophy v-if="isWinner" :size="48" :stroke-width="1.5" />
         <Clock3 v-else :size="48" :stroke-width="1.5" />
       </div>
@@ -47,8 +49,8 @@ const isWinner = computed(() => route.query.result === "won");
       <p class="mb-6 text-sm leading-6 text-zinc-400">
         {{
           isWinner
-            ? "Congratulations! You cleared all 3 levels and cracked the alien code. Return to the room lobby to play again."
-            : "Time ran out, but your room is still open. Return to the room lobby to play again."
+            ? "Congratulations! You cleared all 3 levels and cracked the alien code"
+            : "Time ran out, try one more time"
         }}
       </p>
 

@@ -5,4 +5,6 @@ export const SYMBOL_IDS = [
   'symbol4',
   'symbol5',
   'symbol6'
-]
+] as const;
+
+export type SymbolId = (typeof SYMBOL_IDS)[number];

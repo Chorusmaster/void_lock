@@ -1,7 +1,21 @@
+import type {
+  GameServer,
+  GameSocket,
+  GameSocketDependencies,
+} from "../types.js";
+import { SYMBOL_IDS, type SymbolId } from "../symbols.js";
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every((symbol: unknown) => typeof symbol === "string")
+  );
+}
+
 export function registerGameSockets(
-  io,
-  socket,
-  playerId,
+  io: GameServer,
+  socket: GameSocket,
+  playerId: string,
   {
     rooms,
     generateSequence,
@@ -12,13 +26,14 @@ export function registerGameSockets(
     endLevel,
     maxLevels,
     wrongSequencePenaltySeconds,
-  },
+  }: GameSocketDependencies,
 ) {
   socket.on("generate-sequence", ({ roomCode, length } = {}) => {
-    const room = rooms.get(roomCode);
+    const room = roomCode ? rooms.get(roomCode) : undefined;
     const player = room?.players.find(({ id }) => id === playerId);
 
     if (
+      !roomCode ||
       !room ||
       !socket.rooms.has(roomCode) ||
       player?.role !== "Decoder" ||
@@ -38,10 +53,11 @@ export function registerGameSockets(
   });
 
   socket.on("submit-code", ({ roomCode, code } = {}) => {
-    const room = rooms.get(roomCode);
+    const room = roomCode ? rooms.get(roomCode) : undefined;
     const player = room?.players.find(({ id }) => id === playerId);
 
     if (
+      !roomCode ||
       !room ||
       !socket.rooms.has(roomCode) ||
       player?.role !== "Operator" ||
@@ -55,9 +71,8 @@ export function registerGameSockets(
     }
 
     if (
-      !Array.isArray(code) ||
+      !isStringArray(code) ||
       code.length !== 5 ||
-      !code.every((symbol) => typeof symbol === "string") ||
       room.currentSequence?.length !== 5
     ) {
       socket.emit(
@@ -83,7 +98,7 @@ export function registerGameSockets(
       socket.emit("code-result", { isCorrect: false });
       room.levelEndsAt = Math.max(
         Date.now(),
-        room.levelEndsAt - wrongSequencePenaltySeconds * 1000,
+        room.levelEndsAt! - wrongSequencePenaltySeconds * 1000,
       );
       io.to(roomCode).emit("level-timer-adjusted", {
         level: room.level,
@@ -97,14 +112,14 @@ export function registerGameSockets(
   });
 
   socket.on("assign-roles-manual", ({ roomCode, decoderId } = {}) => {
-    const room = rooms.get(roomCode);
+    const room = roomCode ? rooms.get(roomCode) : undefined;
 
-    if (!room || room.hostId !== playerId) {
+    if (!roomCode || !room || room.hostId !== playerId) {
       socket.emit("room-error", "Only the host can assign roles");
       return;
     }
 
-    if (!assignRoles(roomCode, decoderId)) {
+    if (typeof decoderId !== "string" || !assignRoles(roomCode, decoderId)) {
       socket.emit(
         "room-error",
         "Cannot assign roles. Check the players or whether roles are already assigned.",
@@ -116,9 +131,9 @@ export function registerGameSockets(
   });
 
   socket.on("assign-roles-random", ({ roomCode } = {}) => {
-    const room = rooms.get(roomCode);
+    const room = roomCode ? rooms.get(roomCode) : undefined;
 
-    if (!room || room.hostId !== playerId) {
+    if (!roomCode || !room || room.hostId !== playerId) {
       socket.emit("room-error", "Only the host can assign roles");
       return;
     }
@@ -132,7 +147,7 @@ export function registerGameSockets(
     }
 
     const decoderId =
-      room.players[Math.floor(Math.random() * room.players.length)].id;
+      room.players[Math.floor(Math.random() * room.players.length)]!.id;
 
     if (!assignRoles(roomCode, decoderId)) {
       socket.emit("room-error", "Failed to assign roles");
@@ -143,9 +158,7 @@ export function registerGameSockets(
   });
 }
 
-import { SYMBOL_IDS } from './symbols.js'
-
-export function getRandomSymbols(count) {
+export function getRandomSymbols(count: number): SymbolId[] {
   if (count < 1 || count > SYMBOL_IDS.length) {
     throw new Error('Invalid number of symbols')
   }
@@ -153,14 +166,17 @@ export function getRandomSymbols(count) {
   const shuffled = [...SYMBOL_IDS]
 
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
   }
 
-  return shuffled.slice(0, count)
+  return shuffled.slice(0, count);
 }
 
-export function generateSequence(availableSymbols, length) {
+export function generateSequence(
+  availableSymbols: SymbolId[],
+  length: number,
+): SymbolId[] {
   if (
     availableSymbols.length === 0 ||
     !Number.isInteger(length) ||
@@ -171,8 +187,9 @@ export function generateSequence(availableSymbols, length) {
 
   return Array.from(
     { length },
-    () => availableSymbols[
-      Math.floor(Math.random() * availableSymbols.length)
-    ],
-  )
+    () =>
+      availableSymbols[
+        Math.floor(Math.random() * availableSymbols.length)
+      ]!,
+  );
 }

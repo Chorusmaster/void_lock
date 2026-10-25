@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useGameStore } from "@/stores/game";
 
 const props = defineProps<{
   remainingSeconds: number;
@@ -11,29 +12,61 @@ const formattedTime = computed(() => {
 
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 });
+
+const gameStore = useGameStore();
 </script>
 
 <template>
-  <div class="absolute right-6 top-6 z-10 w-40">
-    <div class="mb-2 flex items-center justify-between gap-2">
-      <span class="text-xs font-medium text-gray-100">TIME REMAINING</span>
+  <div
+    class="absolute right-4 top-4 z-10 w-64 rounded-lg border border-emerald-500/30 bg-emerald-950/30 p-4 backdrop-blur-sm"
+  >
+    <div class="mb-3 flex items-center justify-between gap-2">
+      <span class="text-sm font-semibold tracking-wider text-emerald-200/80">
+        TIME REMAINING
+      </span>
 
       <span
-        class="font-mono text-2xl font-bold tabular-nums"
-        :class="remainingSeconds <= 10 ? 'text-red-500' : 'text-white'"
+        class="font-mono text-3xl font-bold tabular-nums"
+        :class="remainingSeconds <= 10 ? 'text-red-400' : 'text-emerald-300'"
       >
         {{ formattedTime }}
       </span>
     </div>
 
-    <div class="h-2 overflow-hidden rounded-full bg-gray-700">
+    <div class="h-3 overflow-hidden rounded-full bg-emerald-950/60">
       <div
         class="h-full rounded-full transition-[width] duration-250"
-        :class="remainingSeconds <= 10 ? 'bg-red-500' : 'bg-emerald-400'"
+        :class="remainingSeconds <= 10 ? 'bg-red-400' : 'bg-emerald-400'"
         :style="{
           width: `${Math.min(100, (remainingSeconds / 30) * 100)}%`,
         }"
       />
     </div>
+
+    <div class="mt-4 border-t border-emerald-500/20 pt-3">
+      <div class="mb-2 flex items-center justify-between">
+        <span class="text-sm font-semibold tracking-wider text-emerald-200/80">
+          LEVEL
+        </span>
+        <span class="font-mono text-lg font-bold text-emerald-300">
+          {{ gameStore.level }} / 3
+        </span>
+      </div>
+
+      <div class="flex gap-2">
+        <div
+          v-for="level in 3"
+          :key="level"
+          class="h-2 flex-1 rounded-full"
+          :class="
+            level <= gameStore.level
+              ? 'bg-emerald-400'
+              : 'bg-emerald-950'
+          "
+        />
+      </div>
+    </div>
   </div>
 </template>
+
+

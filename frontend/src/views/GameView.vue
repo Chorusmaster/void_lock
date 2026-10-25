@@ -147,7 +147,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <PlayerWebcam class="z-10" status="ok" />
+  <PlayerWebcam
+    class="z-10"
+    status="ok"
+    :room-code="String(route.params.roomCode)"
+  />
   <main class="relative min-h-screen bg-zinc-800">
     <GameTimer :remaining-seconds="remainingSeconds" />
 
@@ -157,7 +161,7 @@ onUnmounted(() => {
     <p
       v-if="errorMessage"
       role="alert"
-      class="mx-auto mt-4 max-w-md rounded-lg bg-red-50 p-3 text-center text-sm text-red-700"
+      class="mt-4 max-w-md rounded-lg bg-red-50 p-3 text-center text-sm text-red-700"
     >
       {{ errorMessage }}
     </p>

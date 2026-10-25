@@ -1,19 +1,27 @@
 import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { getRandomSymbols, generateSequence } from "./sockets/gameSockets.js";
+import {
+  generateSequence,
+  getRandomSymbols,
+  registerGameSockets,
+} from "./sockets/gameSockets.js";
 import { SYMBOL_IDS } from "./symbols.js";
-import { registerGameSockets } from "./sockets/gameSockets.js";
 import { registerRoomSockets } from "./sockets/roomSockets.js";
+import type {
+  GameServer,
+  GameSocket,
+  Room,
+} from "./types.js";
 
 import "dotenv/config";
 
-const LEVEL_DURATION_SECONDS = 900;
+const LEVEL_DURATION_SECONDS = 30;
 const ROLE_REVEAL_DURATION_SECONDS = 3;
 const PLAYER_RECONNECT_GRACE_SECONDS = 30;
 const WRONG_SEQUENCE_PENALTY_SECONDS = 5;
 const MAX_LEVELS = 3;
-const levelTimers = new Map();
+const levelTimers = new Map<string, NodeJS.Timeout>();
 
 // Express setup
 const app = express();
@@ -24,20 +32,25 @@ app.get("/", (_req, res) => {
 });
 
 // WebSocket server setup
-const io = new Server(httpServer, {
+const io: GameServer = new Server(httpServer, {
   cors: {
     origin: process.env.FRONTEND_URL,
   },
 });
 
-const rooms = new Map();
-const roleRevealTimers = new Map();
-const playerReconnectTimers = new Map();
+const rooms = new Map<string, Room>();
+const roleRevealTimers = new Map<string, NodeJS.Timeout>();
+const playerReconnectTimers = new Map<string, NodeJS.Timeout>();
 
-function startRoleReveal(roomCode) {
+function startRoleReveal(roomCode: string) {
   const room = rooms.get(roomCode);
 
-  if (!room || room.players.length !== 2 || roleRevealTimers.has(roomCode)) {
+  if (
+    !room ||
+    room.players.length !== 2 ||
+    room.players.some((player) => !player.socketId || !player.role) ||
+    roleRevealTimers.has(roomCode)
+  ) {
     return;
   }
 
@@ -48,8 +61,8 @@ function startRoleReveal(roomCode) {
   room.roleRevealEndsAt = startAt;
 
   for (const player of room.players) {
-    io.to(player.socketId).emit("role-reveal", {
-      role: player.role,
+    io.to(player.socketId!).emit("role-reveal", {
+      role: player.role!,
       startAt,
       duration,
     });
@@ -63,7 +76,7 @@ function startRoleReveal(roomCode) {
   roleRevealTimers.set(roomCode, timer);
 }
 
-function startLevel(roomCode, level = 1) {
+function startLevel(roomCode: string, level = 1) {
   const room = rooms.get(roomCode);
 
   if (!room || room.players.length !== 2) return;
@@ -84,7 +97,7 @@ function startLevel(roomCode, level = 1) {
   startLevelTimer(roomCode);
 }
 
-function generateRoomCode() {
+function generateRoomCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code;
 
@@ -98,7 +111,7 @@ function generateRoomCode() {
   return code;
 }
 
-function broadcastPlayers(roomCode) {
+function broadcastPlayers(roomCode: string) {
   const room = rooms.get(roomCode);
   if (!room) return;
 
@@ -121,7 +134,7 @@ function broadcastPlayers(roomCode) {
   }
 }
 
-function removePlayerFromRoom(socket) {
+function removePlayerFromRoom(socket: GameSocket) {
   const roomCode = socket.data.roomCode;
   if (!roomCode) return;
 
@@ -147,19 +160,28 @@ function removePlayerFromRoom(socket) {
   delete socket.data.nickname;
 }
 
-function clearRoomTimers(roomCode) {
+function clearRoomTimers(roomCode: string) {
   clearInterval(levelTimers.get(roomCode));
   levelTimers.delete(roomCode);
   clearTimeout(roleRevealTimers.get(roomCode));
   roleRevealTimers.delete(roomCode);
 }
 
-function removePlayerFromRoomById(roomCode, playerId) {
+function removePlayerFromRoomById(roomCode: string, playerId: string) {
   const room = rooms.get(roomCode);
   if (!room) return;
 
   const player = room.players.find((candidate) => candidate.id === playerId);
   if (!player) return;
+
+  if (room.voiceChatReady?.delete(playerId)) {
+    const peer = room.players.find(
+      (candidate) => candidate.id !== playerId && candidate.socketId,
+    );
+    if (peer?.socketId) {
+      io.to(peer.socketId).emit("voice-chat-peer-stopped");
+    }
+  }
 
   clearTimeout(playerReconnectTimers.get(playerId));
   playerReconnectTimers.delete(playerId);
@@ -172,7 +194,7 @@ function removePlayerFromRoomById(roomCode, playerId) {
     const gameWasActive = room.rolesAssigned || room.status !== "waiting";
 
     if (room.hostId === playerId) {
-      room.hostId = room.players[0].id;
+      room.hostId = room.players[0]!.id;
     }
 
     if (gameWasActive) {
@@ -185,7 +207,7 @@ function removePlayerFromRoomById(roomCode, playerId) {
   }
 }
 
-function assignRoles(roomCode, decoderId) {
+function assignRoles(roomCode: string, decoderId: string): boolean {
   const room = rooms.get(roomCode);
 
   if (
@@ -201,11 +223,12 @@ function assignRoles(roomCode, decoderId) {
   }
 
   for (const player of room.players) {
-    player.role = player.id === decoderId ? "Decoder" : "Operator";
+    const role = player.id === decoderId ? "Decoder" : "Operator";
+    player.role = role;
 
-    io.to(player.socketId).emit("role-assigned", {
+    io.to(player.socketId!).emit("role-assigned", {
       roomCode,
-      role: player.role,
+      role,
     });
   }
 
@@ -213,7 +236,7 @@ function assignRoles(roomCode, decoderId) {
   return true;
 }
 
-function resetRoomForLobby(room) {
+function resetRoomForLobby(room: Room) {
   room.status = "waiting";
   room.rolesAssigned = false;
   room.level = 0;
@@ -227,7 +250,7 @@ function resetRoomForLobby(room) {
   }
 }
 
-function finishGame(roomCode) {
+function finishGame(roomCode: string) {
   const room = rooms.get(roomCode);
   if (!room) return;
 
@@ -243,7 +266,7 @@ function finishGame(roomCode) {
   });
 }
 
-function endLevel(roomCode) {
+function endLevel(roomCode: string) {
   const room = rooms.get(roomCode);
   if (!room) return;
 
@@ -256,15 +279,18 @@ function endLevel(roomCode) {
   io.to(roomCode).emit("game-ended", { level });
 }
 
-function restorePlayer(socket) {
+function restorePlayer(socket: GameSocket): boolean {
   const playerId = socket.data.playerId;
+  if (!playerId) return false;
 
   for (const [roomCode, room] of rooms) {
     const player = room.players.find((candidate) => candidate.id === playerId);
 
     if (!player) continue;
 
-    const oldSocket = io.sockets.sockets.get(player.socketId);
+    const oldSocket = player.socketId
+      ? io.sockets.sockets.get(player.socketId)
+      : undefined;
 
     clearTimeout(playerReconnectTimers.get(playerId));
     playerReconnectTimers.delete(playerId);
@@ -297,8 +323,10 @@ function restorePlayer(socket) {
   return false;
 }
 
-function handleDisconnect(socket, playerId) {
+function handleDisconnect(socket: GameSocket, playerId: string) {
   const roomCode = socket.data.roomCode;
+  if (!roomCode) return;
+
   const room = rooms.get(roomCode);
   const player = room?.players.find(
     (candidate) =>
@@ -306,6 +334,15 @@ function handleDisconnect(socket, playerId) {
   );
 
   if (!room || !player) return;
+
+  if (room.voiceChatReady?.delete(playerId)) {
+    const peer = room.players.find(
+      (candidate) => candidate.id !== playerId && candidate.socketId,
+    );
+    if (peer?.socketId) {
+      io.to(peer.socketId).emit("voice-chat-peer-stopped");
+    }
+  }
 
   player.socketId = null;
   broadcastPlayers(roomCode);
@@ -333,7 +370,7 @@ io.on("connection", (socket) => {
 
   console.log("Player connected:", playerId);
 
-  registerRoomSockets(socket, playerId, {
+  registerRoomSockets(io, socket, playerId, {
     rooms,
     generateRoomCode,
     broadcastPlayers,
@@ -354,7 +391,7 @@ io.on("connection", (socket) => {
   });
 });
 
-export function startLevelTimer(roomCode) {
+export function startLevelTimer(roomCode: string) {
   const room = rooms.get(roomCode);
   if (!room) return;
 
@@ -377,7 +414,7 @@ export function startLevelTimer(roomCode) {
   const timer = setInterval(() => {
     const remainingSeconds = Math.max(
       0,
-      Math.ceil((room.levelEndsAt - Date.now()) / 1000),
+      Math.ceil(((room.levelEndsAt ?? 0) - Date.now()) / 1000),
     );
 
     if (remainingSeconds === 0) {
