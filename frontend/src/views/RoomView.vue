@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { socket } from "../utils/socket";
 import { useRouter } from "vue-router";
-import { usePlayerStore, type PlayerRole } from "../stores/player";
+import { usePlayerStore } from "../stores/player";
 import { useGameStore } from "../stores/game";
 
 const props = defineProps<{
@@ -54,19 +54,6 @@ async function copyRoomCode() {
   }
 }
 
-function handleDisconnect() {
-  router.replace({ name: "lobby" });
-}
-
-function handleRoomReset() {
-  playerStore.role = null;
-  gameStore.resetGame();
-  router.replace({
-    name: "room",
-    params: { roomCode: props.roomCode },
-  });
-}
-
 function handlePlayerList(playerList: Player[]) {
   players.value = playerList;
 
@@ -103,27 +90,10 @@ function handleRoomError(message: string) {
   isAssigning.value = false;
 }
 
-function handleRoleReveal(data: {
-  role: PlayerRole;
-  startAt: number;
-  duration: number;
-}) {
-  playerStore.role = data.role;
-
-  router.push({
-    name: "role-reveal",
-    params: { roomCode: props.roomCode },
-    query: { startAt: String(data.startAt) },
-  });
-}
-
 onMounted(() => {
-  socket.on("disconnect", handleDisconnect);
   socket.on("player-list", handlePlayerList);
   socket.on("room-error", handleRoomError);
   socket.on("room-info", handleRoomInfo);
-  socket.on("role-reveal", handleRoleReveal);
-  socket.on("room-reset", handleRoomReset);
 
   if (!socket.connected) {
     router.replace({ name: "lobby" });
@@ -134,12 +104,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  socket.off("disconnect", handleDisconnect);
   socket.off("player-list", handlePlayerList);
   socket.off("room-error", handleRoomError);
   socket.off("room-info", handleRoomInfo);
-  socket.off("role-reveal", handleRoleReveal);
-  socket.off("room-reset", handleRoomReset);
 });
 </script>
 

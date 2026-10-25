@@ -1,26 +1,62 @@
 [
   {
     "level": 1,
-    "symbols": {
-      "easy": 4,
-      "medium": 0,
-      "hard": 0
-    }
+    "durationSeconds": 120,
+    "glitchIntensity": 0.1,
+    "symbols": { "easy": 6, "medium": 2, "hard": 0 }
   },
   {
     "level": 2,
-    "symbols": {
-      "easy": 0,
-      "medium": 4,
-      "hard": 0
-    }
+    "durationSeconds": 100,
+    "glitchIntensity": 0.15,
+    "symbols": { "easy": 4, "medium": 4, "hard": 0 }
   },
   {
     "level": 3,
-    "symbols": {
-      "easy": 0,
-      "medium": 0,
-      "hard": 4
-    }
+    "durationSeconds": 90,
+    "glitchIntensity": 0.25,
+    "symbols": { "easy": 4, "medium": 3, "hard": 1 }
+  },
+  {
+    "level": 4,
+    "durationSeconds": 80,
+    "glitchIntensity": 0.3,
+    "symbols": { "easy": 2, "medium": 4, "hard": 2 }
+  },
+  {
+    "level": 5,
+    "durationSeconds": 70,
+    "glitchIntensity": 0.4,
+    "symbols": { "easy": 2, "medium": 3, "hard": 3 }
+  },
+  {
+    "level": 6,
+    "durationSeconds": 65,
+    "glitchIntensity": 0.5,
+    "symbols": { "easy": 0, "medium": 4, "hard": 4 }
+  },
+  {
+    "level": 7,
+    "durationSeconds": 60,
+    "glitchIntensity": 0.6,
+    "symbols": { "easy": 0, "medium": 3, "hard": 5 }
+  },
+  {
+    "level": 8,
+    "durationSeconds": 55,
+    "glitchIntensity": 0.7,
+    "symbols": { "easy": 0, "medium": 2, "hard": 6 }
+  },
+  {
+    "level": 9,
+    "durationSeconds": 50,
+    "glitchIntensity": 0.75,
+    "symbols": { "easy": 0, "medium": 1, "hard": 7 }
+  },
+  {
+    "level": 10,
+    "durationSeconds": 45,
+    "glitchIntensity": 0.8,
+    "symbols": { "easy": 0, "medium": 0, "hard": 8 }
   }
 ]

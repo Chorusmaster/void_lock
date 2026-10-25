@@ -55,6 +55,7 @@ function handleSequenceGenerated(data: { sequence: string[] }) {
 function handleLevelStarted(data: {
   level: number;
   availableSymbols: string[];
+  glitchIntensity: number;
 }) {
   gameStore.setLevel(data);
 
@@ -69,37 +70,6 @@ function handleLevelStarted(data: {
 function handleRoomError(message: string) {
   errorMessage.value = message;
   errorTrigger.value++;
-}
-
-function handleDisconnect() {
-  router.replace({ name: "lobby" });
-}
-
-function handleRoomReset() {
-  gameStore.resetGame();
-  playerStore.role = null;
-  router.replace({
-    name: "room",
-    params: { roomCode: String(route.params.roomCode) },
-  });
-}
-
-function showEndGame(result: "won" | "ended") {
-  gameStore.resetGame();
-  playerStore.role = null;
-  router.replace({
-    name: "end-game",
-    params: { roomCode: String(route.params.roomCode) },
-    query: { result },
-  });
-}
-
-function handleGameEnded() {
-  showEndGame("ended");
-}
-
-function handleGameWon() {
-  showEndGame("won");
 }
 
 onMounted(() => {
@@ -119,13 +89,9 @@ onMounted(() => {
     });
   }
 
-  socket.on("disconnect", handleDisconnect);
   socket.on("level-timer-started", handleTimerStarted);
   socket.on("level-timer-adjusted", handleTimerAdjusted);
   socket.on("level-timer-tick", handleTimerTick);
-  socket.on("game-ended", handleGameEnded);
-  socket.on("game-won", handleGameWon);
-  socket.on("room-reset", handleRoomReset);
 
   if (gameStore.timerEndsAt !== null) {
     handleTimerStarted({ endsAt: gameStore.timerEndsAt });
@@ -136,13 +102,9 @@ onUnmounted(() => {
   socket.off("sequence-generated", handleSequenceGenerated);
   socket.off("level-started", handleLevelStarted);
   socket.off("room-error", handleRoomError);
-  socket.off("disconnect", handleDisconnect);
   socket.off("level-timer-started", handleTimerStarted);
   socket.off("level-timer-adjusted", handleTimerAdjusted);
   socket.off("level-timer-tick", handleTimerTick);
-  socket.off("game-ended", handleGameEnded);
-  socket.off("game-won", handleGameWon);
-  socket.off("room-reset", handleRoomReset);
 
   clearInterval(timerInterval);
 });
@@ -159,7 +121,7 @@ onUnmounted(() => {
 
     <SequenceView
       v-show="playerStore.role === 'Decoder'"
-      :glitch-intensity="0.5"
+      :glitch-intensity="gameStore.glitchIntensity"
     />
     <VaultView :error-trigger="errorTrigger" v-show="playerStore.role === 'Operator'" />
 

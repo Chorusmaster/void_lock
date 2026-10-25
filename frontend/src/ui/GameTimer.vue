@@ -18,7 +18,7 @@ const gameStore = useGameStore();
 
 <template>
   <div
-    class="absolute right-4 top-4 z-10 w-64 rounded-lg border border-emerald-500/30 bg-emerald-950/30 p-4 backdrop-blur-sm"
+    class="absolute right-4 top-4 z-10 w-64 rounded-lg border border-emerald-500/30 bg-emerald-950/30 p-4 backdrop-blur-sm select-none"
   >
     <div class="mb-3 flex items-center justify-between gap-2">
       <span class="text-sm font-semibold tracking-wider text-emerald-200/80">
@@ -44,29 +44,14 @@ const gameStore = useGameStore();
     </div>
 
     <div class="mt-4 border-t border-emerald-500/20 pt-3">
-      <div class="mb-2 flex items-center justify-between">
+      <div class="flex gap-2 items-center">
         <span class="text-sm font-semibold tracking-wider text-emerald-200/80">
           LEVEL
         </span>
         <span class="font-mono text-lg font-bold text-emerald-300">
-          {{ gameStore.level }} / 3
+          {{ gameStore.level }}
         </span>
-      </div>
-
-      <div class="flex gap-2">
-        <div
-          v-for="level in 3"
-          :key="level"
-          class="h-2 flex-1 rounded-full"
-          :class="
-            level <= gameStore.level
-              ? 'bg-emerald-400'
-              : 'bg-emerald-950'
-          "
-        />
       </div>
     </div>
   </div>
 </template>
-
-
