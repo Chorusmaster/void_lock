@@ -1,0 +1,26 @@
+[
+  {
+    "level": 1,
+    "symbols": {
+      "easy": 4,
+      "medium": 0,
+      "hard": 0
+    }
+  },
+  {
+    "level": 2,
+    "symbols": {
+      "easy": 0,
+      "medium": 4,
+      "hard": 0
+    }
+  },
+  {
+    "level": 3,
+    "symbols": {
+      "easy": 0,
+      "medium": 0,
+      "hard": 4
+    }
+  }
+]

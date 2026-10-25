@@ -1,10 +1,37 @@
-export const SYMBOL_IDS = [
-  'symbol1',
-  'symbol2',
-  'symbol3',
-  'symbol4',
-  'symbol5',
-  'symbol6'
-] as const;
+export const SYMBOLS_BY_CATEGORY = {
+  easy: [
+    "20261025020350",
+    "20261025020415",
+    "20261025020537",
+    "20261025020605",
+    "20261025020709",
+    "20261025020741",
+    "20261025020807",
+    "20261025020904",
+  ],
+  medium: [
+    "16065650226656",
+    "16165959796262",
+    "21695959526266",
+    "26069889261616",
+    "26154959565565",
+    "26659561515494",
+    "61566565566112",
+    "61645459989262",
+  ],
+  hard: [
+    "11944632656565",
+    "20261025021019",
+    "20261025021033",
+    "20261025021057",
+    "20261025021123",
+    "20261025022846",
+    "20261025022915",
+    "20261025022937",
+    "20261025022953",
+  ],
+} as const;
 
-export type SymbolId = (typeof SYMBOL_IDS)[number];
+export type SymbolCategory = keyof typeof SYMBOLS_BY_CATEGORY;
+export type SymbolId = `${SymbolCategory}/${string}`;
+export type SymbolCounts = Record<SymbolCategory, number>;

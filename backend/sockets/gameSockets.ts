@@ -3,7 +3,12 @@ import type {
   GameSocket,
   GameSocketDependencies,
 } from "../types.js";
-import { SYMBOL_IDS, type SymbolId } from "../symbols.js";
+import {
+  SYMBOLS_BY_CATEGORY,
+  type SymbolCategory,
+  type SymbolCounts,
+  type SymbolId,
+} from "../symbols.js";
 
 function isStringArray(value: unknown): value is string[] {
   return (
@@ -158,19 +163,43 @@ export function registerGameSockets(
   });
 }
 
-export function getRandomSymbols(count: number): SymbolId[] {
-  if (count < 1 || count > SYMBOL_IDS.length) {
-    throw new Error('Invalid number of symbols')
-  }
-
-  const shuffled = [...SYMBOL_IDS]
-
+function shuffle<T>(items: T[]): T[] {
+  const shuffled = [...items];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
   }
 
-  return shuffled.slice(0, count);
+  return shuffled;
+}
+
+function selectCategorySymbols(
+  category: SymbolCategory,
+  count: number,
+): SymbolId[] {
+  const categorySymbols = SYMBOLS_BY_CATEGORY[category];
+
+  if (!Number.isInteger(count) || count < 0 || count > categorySymbols.length) {
+    throw new Error(`Invalid ${category} symbol count: ${count}`);
+  }
+
+  return shuffle([...categorySymbols])
+    .slice(0, count)
+    .map((id): SymbolId => `${category}/${id}`);
+}
+
+export function getRandomSymbols(counts: SymbolCounts): SymbolId[] {
+  const symbols = [
+    ...selectCategorySymbols("easy", counts.easy),
+    ...selectCategorySymbols("medium", counts.medium),
+    ...selectCategorySymbols("hard", counts.hard),
+  ];
+
+  if (symbols.length === 0) {
+    throw new Error("At least one symbol must be configured for a level");
+  }
+
+  return shuffle(symbols);
 }
 
 export function generateSequence(

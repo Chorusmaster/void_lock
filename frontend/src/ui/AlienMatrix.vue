@@ -91,6 +91,7 @@ onUnmounted(() => {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  z-index: 0;
 }
 
 .falling-symbol {

@@ -34,43 +34,69 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    class="absolute left-1/2 top-5 z-30 w-[90%] max-w-md -translate-x-1/2 overflow-hidden border p-4 text-center backdrop-blur-md"
-    :class="
-      status === 'success'
-        ? 'border-emerald-400/60 bg-emerald-400/10 shadow-[0_0_15px_rgba(16,185,129,0.2),inset_0_0_20px_rgba(16,185,129,0.08)]'
-        : 'border-red-500/60 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2),inset_0_0_20px_rgba(239,68,68,0.08)]'
-    "
-    role="status"
-  >
-    <!-- Scan lines -->
+  <Transition name="holographic-dissolve">
     <div
-      class="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(255,255,255,0.04)_50%)] bg-[length:100%_4px]"
-    ></div>
-
-    <!-- Decorative accents -->
-    <div
-      class="absolute left-0 top-0 h-px w-1/3"
-      :class="status === 'success' ? 'bg-emerald-300' : 'bg-red-400'"
-    ></div>
-
-    <div
-      class="absolute bottom-0 right-0 h-px w-1/3"
-      :class="status === 'success' ? 'bg-emerald-300' : 'bg-red-400'"
-    ></div>
-
-    <p
-      class="relative mb-2 text-[10px] font-bold uppercase tracking-[0.35em]"
-      :class="status === 'success' ? 'text-emerald-300/80' : 'text-red-300/80'"
+      v-if="visible"
+      class="absolute left-1/2 top-5 z-30 w-[90%] max-w-md -translate-x-1/2 overflow-hidden border p-4 text-center backdrop-blur-md"
+      :class="
+        status === 'success'
+          ? 'border-emerald-400/60 bg-emerald-400/10 shadow-[0_0_15px_rgba(16,185,129,0.2),inset_0_0_20px_rgba(16,185,129,0.08)]'
+          : 'border-red-500/60 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2),inset_0_0_20px_rgba(239,68,68,0.08)]'
+      "
+      role="status"
     >
-      Vault System / Status Report
-    </p>
+      <!-- Scan lines -->
+      <div
+        class="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(255,255,255,0.04)_50%)] bg-[length:100%_4px]"
+      ></div>
 
-    <div
-      class="relative font-mono text-sm font-bold uppercase tracking-wider"
-      :class="status === 'success' ? 'text-emerald-300' : 'text-red-400'"
-    >
-      <slot />
+      <!-- Decorative accents -->
+      <div
+        class="absolute left-0 top-0 h-px w-1/3"
+        :class="status === 'success' ? 'bg-emerald-300' : 'bg-red-400'"
+      ></div>
+
+      <div
+        class="absolute bottom-0 right-0 h-px w-1/3"
+        :class="status === 'success' ? 'bg-emerald-300' : 'bg-red-400'"
+      ></div>
+
+      <p
+        class="relative mb-2 text-[10px] font-bold uppercase tracking-[0.35em]"
+        :class="
+          status === 'success' ? 'text-emerald-300/80' : 'text-red-300/80'
+        "
+      >
+        Vault System / Status Report
+      </p>
+
+      <div
+        class="relative font-mono text-sm font-bold uppercase tracking-wider"
+        :class="status === 'success' ? 'text-emerald-300' : 'text-red-400'"
+      >
+        <slot />
+      </div>
     </div>
-  </div>
+  </Transition>
 </template>
+
+<style scoped>
+.holographic-dissolve-leave-active {
+  transition:
+    opacity 500ms ease-out,
+    filter 500ms ease-out,
+    scale 500ms ease-out;
+}
+
+.holographic-dissolve-leave-to {
+  opacity: 0;
+  filter: blur(8px) saturate(0);
+  scale: 0.96;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holographic-dissolve-leave-active {
+    transition-duration: 1ms;
+  }
+}
+</style>
