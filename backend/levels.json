@@ -9,11 +9,11 @@
     "level": 2,
     "durationSeconds": 90,
     "glitchIntensity": 0.3,
-    "symbols": { "easy": 4, "medium": 3, "hard": 0 }
+    "symbols": { "easy": 4, "medium": 2, "hard": 0 }
   },
   {
     "level": 3,
-    "durationSeconds": 40,
+    "durationSeconds": 50,
     "glitchIntensity": 0.8,
     "symbols": { "easy": 8, "medium": 0, "hard": 0 }
   },
@@ -21,6 +21,6 @@
     "level": 4,
     "durationSeconds": 90,
     "glitchIntensity": 0.4,
-    "symbols": { "easy": 3, "medium": 3, "hard": 1 }
+    "symbols": { "easy": 2, "medium": 3, "hard": 1 }
   }
 ]
