@@ -30,6 +30,11 @@ interface LevelStartedData {
   glitchIntensity: number;
 }
 
+interface LevelTimerStartedData {
+  endsAt: number;
+  duration: number;
+}
+
 function handleRoomCreated(data: { roomCode: string }) {
   if (route.name !== "lobby") return;
 
@@ -113,6 +118,11 @@ function handleLevelStarted(data: LevelStartedData) {
   });
 }
 
+function handleLevelTimerStarted(data: LevelTimerStartedData) {
+  gameStore.setTimerEndsAt(data.endsAt);
+  gameStore.setTimerDurationSeconds(data.duration);
+}
+
 function handleRoomReset() {
   if (!["room", "role-reveal", "game"].includes(String(route.name))) return;
 
@@ -157,6 +167,7 @@ socket.on("room-joined", handleRoomCreated);
 socket.on("room-restored", handleRoomRestored);
 socket.on("role-reveal", handleRoleReveal);
 socket.on("level-started", handleLevelStarted);
+socket.on("level-timer-started", handleLevelTimerStarted);
 socket.on("room-reset", handleRoomReset);
 socket.on("game-ended", handleGameEnded);
 socket.on("game-won", handleGameWon);
@@ -168,6 +179,7 @@ onUnmounted(() => {
   socket.off("room-restored", handleRoomRestored);
   socket.off("role-reveal", handleRoleReveal);
   socket.off("level-started", handleLevelStarted);
+  socket.off("level-timer-started", handleLevelTimerStarted);
   socket.off("room-reset", handleRoomReset);
   socket.off("game-ended", handleGameEnded);
   socket.off("game-won", handleGameWon);
