@@ -5,7 +5,6 @@ import { useGameStore } from "@/stores/game";
 import { usePlayerStore, type PlayerRole } from "@/stores/player";
 import { socket } from "@/utils/socket";
 import AlienMatrix from "@/ui/AlienMatrix.vue";
-import BackgroundMusic from "./ui/BackgroundMusic.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -22,6 +21,7 @@ interface RoomRestoredData {
   glitchIntensity: number;
   roleRevealEndsAt: number | null;
   levelEndsAt: number | null;
+  levelDurationSeconds: number | null;
 }
 
 interface LevelStartedData {
@@ -64,6 +64,9 @@ function handleRoomRestored(data: RoomRestoredData) {
       glitchIntensity: data.glitchIntensity,
     });
     gameStore.setTimerEndsAt(data.levelEndsAt);
+    if (data.levelDurationSeconds !== null) {
+      gameStore.setTimerDurationSeconds(data.levelDurationSeconds);
+    }
     router.replace({
       name: "game",
       params: { roomCode: data.roomCode },
@@ -173,7 +176,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <AlienMatrix class="pointer-events-none" v-if="!(route.name === 'game')" />
+  <AlienMatrix
+    class="pointer-events-none"
+    v-if="route.name !== 'game' && route.name !== 'start'"
+  />
   <RouterView />
-  <BackgroundMusic />
 </template>

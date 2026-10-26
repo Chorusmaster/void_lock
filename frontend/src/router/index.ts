@@ -5,6 +5,11 @@ const router = createRouter({
   routes: [
     {
       path: "/",
+      name: "start",
+      component: () => import("../views/StartView.vue"),
+    },
+    {
+      path: "/lobby",
       name: "lobby",
       component: () => import("../views/LobbyView.vue"),
     },
@@ -18,19 +23,21 @@ const router = createRouter({
       path: "/room/:roomCode/role",
       name: "role-reveal",
       component: () => import("../views/RoleRevealView.vue"),
-      props: true,
     },
     {
       path: "/game/:roomCode",
       name: "game",
       component: () => import("../views/GameView.vue"),
-      props: true,
     },
     {
       path: "/end-game/:roomCode",
-      name: 'end-game',
+      name: "end-game",
       component: () => import("../views/EndGameView.vue"),
-    }
+    },
+    {
+      path: "/:pathMatch(.*)*",
+      redirect: { name: "start" },
+    },
   ],
 });
 

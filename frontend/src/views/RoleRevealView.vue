@@ -9,7 +9,6 @@ const playerStore = usePlayerStore();
 
 const seconds = ref(5);
 const role = computed(() => playerStore.role ?? "");
-const roomCode = computed(() => String(route.params.roomCode ?? ""));
 
 let timer: ReturnType<typeof setInterval> | undefined;
 
@@ -55,8 +54,8 @@ onUnmounted(() => {
       <p class="mt-3 text-sm leading-6 text-zinc-400">
         {{
           role === "Decoder"
-            ? "Decode the alien symbols and guide your teammate."
-            : "Listen to your teammate and enter the correct code."
+            ? "Describe the alien symbols to your teammate"
+            : "Listen to your teammate and enter the correct code"
         }}
       </p>
 

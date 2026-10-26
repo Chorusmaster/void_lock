@@ -96,6 +96,7 @@ export interface ServerToClientEvents {
     glitchIntensity: number;
     roleRevealEndsAt: number | null;
     levelEndsAt: number | null;
+    levelDurationSeconds: number | null;
   }) => void;
   "room-reset": () => void;
   "level-timer-started": (payload: {

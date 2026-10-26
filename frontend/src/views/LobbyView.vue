@@ -151,7 +151,7 @@ onUnmounted(() => {
 
         <form v-else @submit.prevent="joinRoom" class="space-y-5">
           <p class="text-center text-sm leading-6 text-zinc-400">
-            Enter your partner's access code to join the mission.
+            Enter access code from your teammate's screen to start
           </p>
 
           <input

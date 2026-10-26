@@ -9,6 +9,7 @@ export const useGameStore = defineStore('game', () => {
   const secretCode = ref<string[]>([])
   const roomCode = ref("")
   const timerEndsAt = ref<number | null>(null)
+  const timerDurationSeconds = ref(0)
 
   function setRoomCode(code: string) {
     roomCode.value = code
@@ -24,10 +25,15 @@ export const useGameStore = defineStore('game', () => {
     glitchIntensity.value = data.glitchIntensity
     secretCode.value = []
     timerEndsAt.value = null
+    timerDurationSeconds.value = 0
   }
 
   function setTimerEndsAt(endsAt: number | null) {
     timerEndsAt.value = endsAt
+  }
+
+  function setTimerDurationSeconds(durationSeconds: number) {
+    timerDurationSeconds.value = durationSeconds
   }
 
   function setSecretCode(sequence: string[]) {
@@ -40,6 +46,7 @@ export const useGameStore = defineStore('game', () => {
     glitchIntensity.value = 0.5
     secretCode.value = []
     timerEndsAt.value = null
+    timerDurationSeconds.value = 0
   }
 
   return {
@@ -49,10 +56,12 @@ export const useGameStore = defineStore('game', () => {
     secretCode,
     roomCode,
     timerEndsAt,
+    timerDurationSeconds,
     setLevel,
     setSecretCode,
     setRoomCode,
     setTimerEndsAt,
+    setTimerDurationSeconds,
     resetGame
   }
 })

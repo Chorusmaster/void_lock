@@ -7,7 +7,7 @@ import { usePlayerStore } from "@/stores/player";
 import HolographicPanel from "@/ui/HolographicPanel.vue";
 
 const buttonSound = new Audio("/audio/click.ogg");
-const errorSound = new Audio("/audio/error.mp3");
+const errorSound = new Audio("/audio/panel.ogg");
 
 const player = usePlayerStore();
 const gameStore = useGameStore();
@@ -148,6 +148,7 @@ let flashTimeout: ReturnType<typeof setTimeout> | undefined;
 
 function flashRed() {
   if (flashTimeout) clearTimeout(flashTimeout);
+  errorSound.play()
 
   isRedFlashing.value = true;
 

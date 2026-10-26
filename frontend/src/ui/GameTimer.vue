@@ -4,6 +4,7 @@ import { useGameStore } from "@/stores/game";
 
 const props = defineProps<{
   remainingSeconds: number;
+  maxDurationSeconds: number;
 }>();
 
 const formattedTime = computed(() => {
@@ -11,6 +12,15 @@ const formattedTime = computed(() => {
   const seconds = props.remainingSeconds % 60;
 
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+});
+
+const progressPercentage = computed(() => {
+  if (props.maxDurationSeconds <= 0) return 0;
+
+  return Math.min(
+    100,
+    Math.max(0, (props.remainingSeconds / props.maxDurationSeconds) * 100),
+  );
 });
 
 const gameStore = useGameStore();
@@ -37,9 +47,7 @@ const gameStore = useGameStore();
       <div
         class="h-full rounded-full transition-[width] duration-250"
         :class="remainingSeconds <= 10 ? 'bg-red-400' : 'bg-emerald-400'"
-        :style="{
-          width: `${Math.min(100, (remainingSeconds / 30) * 100)}%`,
-        }"
+        :style="{ width: `${progressPercentage}%` }"
       />
     </div>
 
