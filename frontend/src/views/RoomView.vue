@@ -182,7 +182,7 @@ onUnmounted(() => {
               v-if="players.length < 2"
               class="rounded-xl mt-4 border border-dashed border-zinc-700 px-4 py-6 text-center text-sm text-zinc-500"
             >
-              Waiting for teammate...
+              Send the code to your teammate and wait until he/she joins
             </li>
           </ul>
         </section>
@@ -197,13 +197,26 @@ onUnmounted(() => {
       </p>
 
       <footer class="flex justify-end pt-3 gap-2">
-        <button
-          :disabled="!canStart || !isHost"
-          class="flex-1 rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 font-semibold text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-500/20 hover:shadow-lg hover:shadow-emerald-950/40 disabled:cursor-not-allowed disabled:opacity-40"
-          @click="assignRandomRoles"
-        >
-          Start
-        </button>
+        <div class="flex-1">
+          <button
+            v-if="isHost"
+            :disabled="!canStart"
+            class="w-full rounded-xl border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 font-semibold text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-500/20 hover:shadow-lg hover:shadow-emerald-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+            @click="assignRandomRoles"
+          >
+            Start
+          </button>
+
+          <div
+            v-else
+            class="flex min-h-12 items-center gap-2 px-3 text-sm"
+          >
+            <span
+              class="h-2 w-2 animate-pulse rounded-full bg-emerald-400"
+            ></span>
+            Waiting for host to start the game...
+          </div>
+        </div>
         <button
           type="button"
           class="rounded-lg border border-red-900/70 px-6 py-2 text-sm text-red-400 transition hover:bg-red-950/50"

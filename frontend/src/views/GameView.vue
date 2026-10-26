@@ -8,6 +8,7 @@ import SequenceView from "./SequenceView.vue";
 import VaultView from "./VaultView.vue";
 import PlayerWebcam from "@/ui/PlayerWebcam.vue";
 import GameTimer from "@/ui/GameTimer.vue";
+import BackgroundMusic from "@/ui/BackgroundMusic.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -30,7 +31,8 @@ function updateTimer() {
   );
 }
 
-function handleTimerStarted(data: { endsAt: number }) {
+function handleTimerStarted(data: { endsAt: number; duration: number }) {
+  gameStore.setTimerDurationSeconds(data.duration);
   handleTimerAdjusted(data);
 
   clearInterval(timerInterval);
@@ -94,7 +96,10 @@ onMounted(() => {
   socket.on("level-timer-tick", handleTimerTick);
 
   if (gameStore.timerEndsAt !== null) {
-    handleTimerStarted({ endsAt: gameStore.timerEndsAt });
+    handleTimerStarted({
+      endsAt: gameStore.timerEndsAt,
+      duration: gameStore.timerDurationSeconds,
+    });
   }
 });
 
@@ -117,7 +122,10 @@ onUnmounted(() => {
     :room-code="String(route.params.roomCode)"
   />
   <main class="relative min-h-screen bg-zinc-800">
-    <GameTimer :remaining-seconds="remainingSeconds" />
+    <GameTimer
+      :remaining-seconds="remainingSeconds"
+      :max-duration-seconds="gameStore.timerDurationSeconds"
+    />
 
     <SequenceView
       v-show="playerStore.role === 'Decoder'"
@@ -133,4 +141,6 @@ onUnmounted(() => {
       {{ errorMessage }}
     </p>
   </main>
+
+  <BackgroundMusic />
 </template>

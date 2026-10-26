@@ -5,10 +5,10 @@ const audio = ref<HTMLAudioElement | null>(null);
 
 onMounted(() => {
   if (audio.value?.volume) {
-    audio.value.volume = 0;
+    audio.value.volume = 0.10;
   }
   audio.value?.play().catch(() => {
-    console.error("Audio error")
+    //
   });
 });
 

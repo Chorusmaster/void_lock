@@ -373,6 +373,7 @@ function restorePlayer(socket: GameSocket): boolean {
       glitchIntensity: LEVELS[room.level - 1]?.glitchIntensity ?? 0.5,
       roleRevealEndsAt: room.roleRevealEndsAt ?? null,
       levelEndsAt: room.levelEndsAt ?? null,
+      levelDurationSeconds: LEVELS[room.level - 1]?.durationSeconds ?? null,
     });
 
     broadcastPlayers(roomCode);
@@ -426,8 +427,6 @@ io.on("connection", (socket) => {
   }
 
   socket.data.playerId = playerId;
-
-  console.log("Player connected:", playerId);
 
   registerRoomSockets(io, socket, playerId, {
     rooms,

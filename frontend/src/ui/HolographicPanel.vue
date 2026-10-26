@@ -47,7 +47,7 @@ onUnmounted(() => {
     >
       <!-- Scan lines -->
       <div
-        class="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(255,255,255,0.04)_50%)] bg-[length:100%_4px]"
+        class="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(255,255,255,0.04)_50%)] bg-size-[100%_4px]"
       ></div>
 
       <!-- Decorative accents -->
